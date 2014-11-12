@@ -1,25 +1,23 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package celtech.tools.languagefileprocessor;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.HashMap;
-import java.util.Scanner;
-import libertysystems.stenographer.Stenographer;
-import libertysystems.stenographer.StenographerFactory;
-import java.nio.charset.Charset;
-import java.io.OutputStreamWriter;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
+import libertysystems.stenographer.Stenographer;
+import libertysystems.stenographer.StenographerFactory;
+import org.apache.commons.io.FilenameUtils;
 
 /**
  *
@@ -36,15 +34,18 @@ public class LanguageFileProcessor
     public static void main(String[] args)
     {
         boolean localeFound = false;
-        HashMap<Integer, String> localeNames = new HashMap<>();
-        HashMap<Integer, PrintWriter> localeFiles = new HashMap<>();
+        HashMap<Integer, List<PrintWriter>> localeFiles = new HashMap<>();
 
         if (args.length > 0)
         {
             File sourceFile = new File(args[0]);
-            String path = sourceFile.getParent();
+
+            String path = FilenameUtils.getFullPath(sourceFile.getAbsolutePath());
+
             String filename = sourceFile.getName().replaceFirst("\\..*", "");
             Charset charset = Charset.forName("US-ASCII");
+
+            int defaultLanguageColumn = -1;
 
             try
             {
@@ -53,49 +54,56 @@ public class LanguageFileProcessor
                 String line;
                 while ((line = in.readLine()) != null)
                 {
-                    String[] fields = line.split("\t");
+                    String[] fields = line.split("\t", -1);
                     if (fields.length > 0)
                     {
                         if (localeFound == false && fields[0].equalsIgnoreCase("Locale"))
                         {
                             for (int i = 1; i < fields.length; i++)
                             {
-                                if (fields[i] != null)
+                                if (fields[i].equals("") == false)
                                 {
-                                    localeNames.put(i, fields[i]);
-                                    String localeFileName;
-                                    if (fields[i].equalsIgnoreCase("default"))
+                                    String[] locales = fields[i].split(":");
+
+                                    for (String currentLocale : locales)
                                     {
-                                        localeFileName = path + File.separator + filename + ".properties";
-                                    } else
-                                    {
-                                        localeFileName = path + File.separator + filename + "_" + fields[i] + ".properties";
+                                        String localeFileName;
+                                        if (currentLocale.equalsIgnoreCase("default"))
+                                        {
+                                            localeFileName = path + File.separator + filename + ".properties";
+                                            defaultLanguageColumn = i;
+                                        } else
+                                        {
+                                            localeFileName = path + File.separator + filename + "_" + currentLocale + ".properties";
+                                        }
+
+                                        localeFound = createFile(localeFileName, localeFiles, i, localeFound);
                                     }
-
-                                    File localeFile = new File(localeFileName);
-                                    try
-                                    {
-                                        PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(localeFileName), "UTF-8"));
-
-                                        localeFiles.put(i, out);
-                                        localeFound = true;
-                                    } catch (UnsupportedEncodingException ex)
-                                    {
-                                        steno.error("Unsupport encoding");
-                                    }
-
                                 }
                             }
                         } else if (localeFound == true)
                         {
                             if (fields[0].startsWith("#") == false)
                             {
-                                for (int i = 1; i < fields.length; i++)
+                                String propertyName = fields[0];
+                                String defaultLanguageValue = fields[defaultLanguageColumn];
+
+                                for (Entry<Integer, List<PrintWriter>> entry : localeFiles.entrySet())
                                 {
-                                    PrintWriter localeFileWriter = localeFiles.get(i);
-                                    if (localeFiles.get(i) != null)
+                                    List<PrintWriter> localeFileWriters = entry.getValue();
+                                    String localisedValue = fields[entry.getKey()];
+
+                                    String valueToOutput = defaultLanguageValue;
+
+                                    if (localisedValue.equals("") == false)
                                     {
-                                        String lineToOutput = fields[0] + "=" + fields[i] + "\r\n";
+                                        valueToOutput = localisedValue;
+                                    }
+
+                                    String lineToOutput = propertyName + "=" + valueToOutput + "\r\n";
+
+                                    for (PrintWriter localeFileWriter : localeFileWriters)
+                                    {
                                         localeFileWriter.write(lineToOutput);
                                     }
                                 }
@@ -104,12 +112,14 @@ public class LanguageFileProcessor
                     }
                 }
 
-                for (PrintWriter fileWriter : localeFiles.values())
+                for (List<PrintWriter> fileWriters : localeFiles.values())
                 {
-                    fileWriter.close();
+                    for (PrintWriter fileWriter : fileWriters)
+                    {
+                        fileWriter.close();
+                    }
                 }
 
-                steno.info("Got " + localeNames.size() + " locales");
             } catch (FileNotFoundException ex)
             {
                 steno.error("Couldn't open file " + args[0]);
@@ -124,5 +134,28 @@ public class LanguageFileProcessor
         {
             steno.info(null);
         }
+    }
+
+    private static boolean createFile(String localeFileName, HashMap<Integer, List<PrintWriter>> localeFiles, int i, boolean localeFound) throws FileNotFoundException
+    {
+        File localeFile = new File(localeFileName);
+        try
+        {
+            PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(localeFileName), "UTF-8"));
+            
+            if (localeFiles.get(i) == null)
+            {
+                localeFiles.put(i, new ArrayList<>());
+            }
+            
+            List<PrintWriter> writerList = localeFiles.get(i);
+            writerList.add(out);
+            
+            localeFound = true;
+        } catch (UnsupportedEncodingException ex)
+        {
+            steno.error("Unsupported encoding");
+        }
+        return localeFound;
     }
 }
