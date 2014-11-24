@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
@@ -27,6 +28,7 @@ public class LanguageFileProcessor
 {
 
     private static Stenographer steno = StenographerFactory.getStenographer(LanguageFileProcessor.class.getName());
+    private static final String testLocale = "en_test";
 
     /**
      * @param args the command line arguments
@@ -34,7 +36,9 @@ public class LanguageFileProcessor
     public static void main(String[] args)
     {
         boolean localeFound = false;
+
         HashMap<Integer, List<PrintWriter>> localeFiles = new HashMap<>();
+        HashMap<Integer, String> locales = new HashMap<>();
 
         if (args.length > 0)
         {
@@ -54,18 +58,19 @@ public class LanguageFileProcessor
                 String line;
                 while ((line = in.readLine()) != null)
                 {
-                    String[] fields = line.split("\t", -1);
-                    if (fields.length > 0)
+                    ArrayList<String> fields = new ArrayList<>(Arrays.asList(line.split("\t", -1)));
+                    fields.add(testLocale);
+                    
+                    if (fields.size() > 0)
                     {
-                        if (localeFound == false && fields[0].equalsIgnoreCase("Locale"))
+                        if (localeFound == false && fields.get(0).equalsIgnoreCase("Locale"))
                         {
-                            for (int i = 1; i < fields.length; i++)
+                            for (int i = 1; i < fields.size(); i++)
                             {
-                                if (fields[i].equals("") == false)
+                                if (fields.get(i).equals("") == false)
                                 {
-                                    String[] locales = fields[i].split(":");
-
-                                    for (String currentLocale : locales)
+                                    locales.put(i, fields.get(i));
+                                    for (String currentLocale : fields.get(i).split(":"))
                                     {
                                         String localeFileName;
                                         if (currentLocale.equalsIgnoreCase("default"))
@@ -83,16 +88,21 @@ public class LanguageFileProcessor
                             }
                         } else if (localeFound == true)
                         {
-                            if (fields[0].startsWith("#") == false)
+                            if (fields.get(0).startsWith("#") == false)
                             {
-                                String propertyName = fields[0];
-                                String defaultLanguageValue = fields[defaultLanguageColumn];
+                                String propertyName = fields.get(0);
+                                String defaultLanguageValue = fields.get(defaultLanguageColumn);
 
                                 for (Entry<Integer, List<PrintWriter>> entry : localeFiles.entrySet())
                                 {
                                     List<PrintWriter> localeFileWriters = entry.getValue();
-                                    String localisedValue = fields[entry.getKey()];
+                                    String localisedValue = fields.get(entry.getKey());
 
+                                    if (locales.get(entry.getKey()).equalsIgnoreCase(testLocale))
+                                    {
+                                        localisedValue = FauxCyrillicMapper.parseString(defaultLanguageValue);
+                                    }
+                                    
                                     String valueToOutput = defaultLanguageValue;
 
                                     if (localisedValue.equals("") == false)
@@ -142,15 +152,15 @@ public class LanguageFileProcessor
         try
         {
             PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(localeFileName), "UTF-8"));
-            
+
             if (localeFiles.get(i) == null)
             {
                 localeFiles.put(i, new ArrayList<>());
             }
-            
+
             List<PrintWriter> writerList = localeFiles.get(i);
             writerList.add(out);
-            
+
             localeFound = true;
         } catch (UnsupportedEncodingException ex)
         {
