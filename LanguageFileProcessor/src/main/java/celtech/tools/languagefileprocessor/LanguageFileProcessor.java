@@ -28,7 +28,7 @@ public class LanguageFileProcessor
 {
 
     private static Stenographer steno = StenographerFactory.getStenographer(LanguageFileProcessor.class.getName());
-    private static final String testLocale = "en_test";
+    private static final String testLocale = "en_GB_faux";
 
     /**
      * @param args the command line arguments
