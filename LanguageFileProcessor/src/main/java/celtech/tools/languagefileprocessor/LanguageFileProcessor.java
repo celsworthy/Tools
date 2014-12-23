@@ -27,7 +27,8 @@ import org.apache.commons.io.FilenameUtils;
 public class LanguageFileProcessor
 {
 
-    private static Stenographer steno = StenographerFactory.getStenographer(LanguageFileProcessor.class.getName());
+    private static Stenographer steno = StenographerFactory.getStenographer(
+        LanguageFileProcessor.class.getName());
     private static final String testLocale = "en_GB_faux";
 
     /**
@@ -53,14 +54,15 @@ public class LanguageFileProcessor
 
             try
             {
-                BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(args[0]), "UTF-8"));
+                BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(
+                    args[0]), "UTF-8"));
 
                 String line;
                 while ((line = in.readLine()) != null)
                 {
                     ArrayList<String> fields = new ArrayList<>(Arrays.asList(line.split("\t", -1)));
                     fields.add(testLocale);
-                    
+
                     if (fields.size() > 0)
                     {
                         if (localeFound == false && fields.get(0).equalsIgnoreCase("Locale"))
@@ -75,14 +77,17 @@ public class LanguageFileProcessor
                                         String localeFileName;
                                         if (currentLocale.equalsIgnoreCase("default"))
                                         {
-                                            localeFileName = sourcePath + File.separator + filename + ".properties";
+                                            localeFileName = sourcePath + File.separator + filename
+                                                + ".properties";
                                             defaultLanguageColumn = i;
                                         } else
                                         {
-                                            localeFileName = sourcePath + File.separator + filename + "_" + currentLocale + ".properties";
+                                            localeFileName = sourcePath + File.separator + filename
+                                                + "_" + currentLocale + ".properties";
                                         }
 
-                                        localeFound = createFile(localeFileName, localeFiles, i, localeFound);
+                                        localeFound = createFile(localeFileName, localeFiles, i,
+                                                                 localeFound);
                                     }
                                 }
                             }
@@ -93,17 +98,17 @@ public class LanguageFileProcessor
                                 String propertyName = fields.get(0);
                                 String defaultLanguageValue = fields.get(defaultLanguageColumn);
 
-                                for (Entry<Integer, List<PrintWriter>> filesforLocales : localeFiles.entrySet())
+                                for (Entry<Integer, List<PrintWriter>> filesforLocales : localeFiles.
+                                    entrySet())
                                 {
-                                    writePropertyLineForLocales(filesforLocales, fields, locales, defaultLanguageValue,
-                                                        propertyName, templateValues);
+                                    writePropertyLineForLocales(filesforLocales, fields, locales,
+                                                                defaultLanguageValue,
+                                                                propertyName, templateValues);
                                 }
                             }
                         }
                     }
                 }
-                
-                
 
                 for (List<PrintWriter> fileWriters : localeFiles.values())
                 {
@@ -112,7 +117,7 @@ public class LanguageFileProcessor
                         fileWriter.close();
                     }
                 }
-                
+
             } catch (FileNotFoundException ex)
             {
                 steno.error("Couldn't open file " + args[0]);
@@ -130,57 +135,69 @@ public class LanguageFileProcessor
     }
 
     /**
-     * 
+     *
      */
-    private static void writePropertyLineForLocales(Entry<Integer, List<PrintWriter>> filesforLocales,
+    private static void writePropertyLineForLocales(
+        Entry<Integer, List<PrintWriter>> filesforLocales,
         ArrayList<String> fields, Map<Integer, String> locales, String defaultLanguageValue,
         String propertyName, Map<Integer, Map<String, String>> templateValues)
     {
         int localeIndex = filesforLocales.getKey();
         List<PrintWriter> localeFileWriters = filesforLocales.getValue();
         String localisedValue = fields.get(localeIndex);
-        if (! templateValues.containsKey(localeIndex)) {
+        if (!templateValues.containsKey(localeIndex))
+        {
             templateValues.put(localeIndex, new HashMap<>());
         }
         Map<String, String> templateValuesForLocale = templateValues.get(localeIndex);
-        
+
         if (locales.get(localeIndex).equalsIgnoreCase(testLocale))
         {
             localisedValue = FauxCyrillicMapper.parseString(defaultLanguageValue);
         }
-        
+
         String valueToOutput = defaultLanguageValue;
-        
+
         if (localisedValue.equals("") == false)
         {
             valueToOutput = localisedValue;
         }
-        
+
         // NB substitutions MUST come before usages in tsv file. Keys must have exactly two digits (UGH)
         // e.g. *T08
-        if (propertyName.startsWith("*T")) {
+        if (propertyName.startsWith("*T"))
+        {
             templateValuesForLocale.put(propertyName, valueToOutput);
-        } else {
-            for (Entry<String, String> templateSubstitutions: templateValuesForLocale.entrySet())
+        } else
+        {
+            if (valueToOutput.contains("*T"))
             {
-                valueToOutput = valueToOutput.replace(templateSubstitutions.getKey(),
-                                                         templateSubstitutions.getValue());
+                steno.info("Input was " + valueToOutput);
+                for (Entry<String, String> templateSubstitutions : templateValuesForLocale.
+                    entrySet())
+                {
+                    valueToOutput = valueToOutput.replace(templateSubstitutions.getKey(),
+                                                          templateSubstitutions.getValue());
+                }
+                steno.info("Output was " + valueToOutput);
             }
         }
-        
+
         String lineToOutput = propertyName + "=" + valueToOutput + "\r\n";
-        
+
         for (PrintWriter localeFileWriter : localeFileWriters)
         {
             localeFileWriter.write(lineToOutput);
         }
     }
 
-    private static boolean createFile(String localeFileName, Map<Integer, List<PrintWriter>> localeFiles, int i, boolean localeFound) throws FileNotFoundException
+    private static boolean createFile(String localeFileName,
+        Map<Integer, List<PrintWriter>> localeFiles, int i, boolean localeFound) throws FileNotFoundException
     {
         try
         {
-            PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(localeFileName), "UTF-8"));
+            PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(
+                localeFileName), "UTF-8"));
 
             if (localeFiles.get(i) == null)
             {
