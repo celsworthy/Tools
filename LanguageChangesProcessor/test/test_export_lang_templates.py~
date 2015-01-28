@@ -1,0 +1,15 @@
+
+
+import unittest
+
+import export_lang_templates
+
+class TestTemplates(unittest.TestCase):
+
+    def testA(self):
+        return True
+
+    def testHashEnglish(self):
+        """
+        Test that the English language is hashed correctly
+        """
