@@ -31,10 +31,20 @@ def make_xls_data(path):
     write_xls(path, 'Demo', hdngs, data)
 
 
-def make_lang_data(path):
+def make_lang_data_1(path):
     data = """application.title=Robox® AutoMaker™
 aboutPanel.applicationNamePart1=Auto
 aboutPanel.applicationNamePart2=Maker
+"""
+    f = file(path, "rw+")
+    f.write(data)
+    f.close()
+
+def make_lang_data_2(path):
+    data = """application.title=Robox2® AutoMaker™
+aboutPanel.applicationNamePart1=Auto
+aboutPanel.applicationNamePart2=Maker
+dialogs.mess=Message
 """
     f = file(path, "rw+")
     f.write(data)
@@ -53,10 +63,24 @@ class TestTemplates(unittest.TestCase):
     def testGetRowsFromLanguageFile(self):
         hnd, path = tempfile.mkstemp()
         os.close(hnd)
-        make_lang_data(path)
+        make_lang_data_1(path)
         rows = export_lang_templates.getRowsFromLanguageFile(path)
         print rows
         self.assertEquals(3, len(rows))
+
+    def testGetLanguageFilesDelta(self):
+        hnd, path1 = tempfile.mkstemp()
+        os.close(hnd)
+        make_lang_data_1(path1)
+        hnd, path2 = tempfile.mkstemp()
+        os.close(hnd)
+        make_lang_data_2(path2)
+
+        rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
+        print rows
+        self.assertEquals(2, len(rows))
+        deltaKeys = set([row.key for row in rows.values()])
+        self.assertEquals(set(["application.title", "dialogs.mess"]), deltaKeys)
 
     def testGetRowsFromXLS(self):
         hnd, path = tempfile.mkstemp()

@@ -12,6 +12,7 @@ class Row(object):
         self.isValid = True
         try:
             self.rowNum = rowNum
+            self.key = None
             self.english = sheet.cell_value(rowNum, 1)
             self.translation = sheet.cell_value(rowNum, 2)
             self.hash_ = getHashForEnglish(self.english)
@@ -22,7 +23,8 @@ class Row(object):
         self.isValid = True
         try:
             self.rowNum = None
-            self.english, self.translation = line.split('=')
+            self.key, self.english = line.split('=')
+            self.translation = None
             self.hash_ = getHashForEnglish(self.english)
         except Exception:
             self.isVaid = False
@@ -53,6 +55,22 @@ def getRowsFromLanguageFile(pathToLanguageFile):
             if row.isValid:
                 rowsByHash[row.hash_] = row
     return rowsByHash
+
+
+def getLanguageFilesDelta(pathOriginal, pathNew):
+    rowsOriginal = getRowsFromLanguageFile(pathOriginal)
+    rowsNew = getRowsFromLanguageFile(pathNew)
+    # changed and new rows will have a hash that does not exist in the original
+    originalHashes = set(rowsOriginal.keys())
+    newHashes = set(rowsNew.keys())
+    print "A", originalHashes, newHashes
+    changedHashes = newHashes.difference(originalHashes)
+    print "B", changedHashes
+    deltaRows = {}
+    for hash_ in changedHashes:
+        deltaRows[hash_] = rowsNew[hash_]
+    return deltaRows
+
 
 def getRowsFromXLS(pathToXLS):
     """
