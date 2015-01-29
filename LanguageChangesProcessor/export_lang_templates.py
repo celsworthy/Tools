@@ -1,7 +1,9 @@
 import xlrd
 import xlwt
 import hashlib
-
+import subprocess
+import os
+import tempfile
 
 class Row(object):
 
@@ -33,7 +35,23 @@ class Row(object):
         return "<Row %s %s %s %s>" % (self.rowNum, self.hash_, self.english, self.translation)
 
 
+def getGitRepositoryFiles(tagOriginal, tagNew, filePath):
+    os.chdir("/home/tony/NetBeansProjects/celtechcore")
+
+    hnd1, path1 = tempfile.mkstemp()
+    hnd2, path2 = tempfile.mkstemp()
+
+    subprocess.call(["git", "show", tagOriginal + ":" + filePath], stdout=hnd1)
+    subprocess.call(["git", "show", tagNew + ":" + filePath], stdout=hnd2)
+
+    os.close(hnd1)
+    os.close(hnd2)
+
+    return path1, path2
+
+
 def getHashForEnglish(englishString):
+    # returning a cut down string with this hash method is safe and effective, according to Google
     return hashlib.sha1(englishString).hexdigest()[:10]
 
 
@@ -63,9 +81,7 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
     # changed and new rows will have a hash that does not exist in the original
     originalHashes = set(rowsOriginal.keys())
     newHashes = set(rowsNew.keys())
-    print "A", originalHashes, newHashes
     changedHashes = newHashes.difference(originalHashes)
-    print "B", changedHashes
     deltaRows = {}
     for hash_ in changedHashes:
         deltaRows[hash_] = rowsNew[hash_]
@@ -75,17 +91,20 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
 def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     workbook = xlwt.Workbook(encoding="UTF-8")
     sheet = workbook.add_sheet("Translations - " + languageCode)
+
     headings = ["Hash", "English", "Translation"]
     rowx = 0
     for colx, value in enumerate(headings):
         sheet.write(rowx, colx, value)
-        #sheet.set_panes_frozen(True) # frozen headings instead of split panes
-        #sheet.set_horz_split_pos(rowx+1) # in general, freeze after last heading row
-        #sheet.set_remove_splits(True) # if user does unfreeze, don't leave a split there
     for row in deltaRows:
         rowx += 1
         sheet.write(rowx, 0, row.hash_)
         sheet.write(rowx, 1, row.english)
+
+    sheet.set_panes_frozen(True) # frozen headings instead of split panes
+    sheet.set_horz_split_pos(1)
+    sheet.set_vert_split_pos(2)         
+
     workbook.save(pathTemplateXLS)
 
 

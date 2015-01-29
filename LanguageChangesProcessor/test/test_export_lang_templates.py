@@ -94,7 +94,10 @@ class TestTemplates(unittest.TestCase):
         deltaRowsByHash = export_lang_templates.getLanguageFilesDelta(path1, path2)
         hnd, pathTemplateXLS = tempfile.mkstemp()
         os.close(hnd)
-        #deltaTemplateXLS = makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode)
-        deltaTemplateXLS = export_lang_templates.makeTemplateFileFromDeltaRows(
-            deltaRowsByHash.values(), "/tmp/DEOUT.xls", "DE")
+        deltaTemplateXLS = export_lang_templates.makeTemplateFileFromDeltaRows(deltaRowsByHash.values(), pathTemplateXLS, "DE")
         
+    def testGetGitRepositoryFiles(self):
+        path1, path2 = export_lang_templates.getGitRepositoryFiles("develop~30", "develop~1", 
+                             "src/main/java/celtech/resources/i18n/LanguageData.properties")
+        rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
+        print "GITDIFF", rows
