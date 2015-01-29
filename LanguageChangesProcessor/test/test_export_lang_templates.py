@@ -130,7 +130,3 @@ class TestTemplates(unittest.TestCase):
         lang_templates.updatePropertiesFileFromTemplate(propertiesFilePath, templateXLSPath)   
         print "YY"
         print file(propertiesFilePath).read()
-        rows = lang_templates.getRowsFromLanguageFile(propertiesFilePath)
-        print "XX"
-        for row in rows.values():
-            print row

@@ -16,7 +16,8 @@ python lang_templates.py IMPORT
 ########## Configuration ############
 
 # location of celtechcore git repo
-CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
+#CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
+CELTECH_REPO_DIR="/home/tony/tmp/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH="/tmp/templates"
 # codes of languages to be exported / imported
@@ -194,6 +195,13 @@ def updatePropertiesFileFromTemplate(propertiesPath, templateXLSPath):
     for hash_, row in templateXLSRows.iteritems():
         propertiesRows[hash_].fullString = row.translation
     writePropertiesFile(propertiesPath, propertiesRows.values())
+
+
+def importTemplateFiles():
+    for langCode in LANG_CODES:
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".xls")
+        pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
+        updatePropertiesFileFromTemplate(pathPropertiesFile, pathTemplateXLS)
 
 
 if __name__ == "__main__":
