@@ -4,7 +4,7 @@ import unittest
 import tempfile
 import os
 
-import export_lang_templates
+import lang_templates
 
 def write_xls(file_name, sheet_name, headings, data):
     book = xlwt.Workbook()
@@ -50,8 +50,8 @@ def make_xls_completed_template():
     hdngs = ['Hash', 'English', 'Translation']
     kinds = 'text text text'.split()
     data = [
-        [export_lang_templates.getHashForString("dialogs.key2"), "K2", "Translation K2"],
-        [export_lang_templates.getHashForString("error.error1"), "E1", "Translation E1"]]
+        [lang_templates.getHashForString("dialogs.key2"), "K2", "Translation K2"],
+        [lang_templates.getHashForString("error.error1"), "E1", "Translation E1"]]
     write_xls(path, 'Demo', hdngs, data)
     return path                     
 
@@ -90,14 +90,14 @@ class TestTemplates(unittest.TestCase):
 
     def testGetRowsFromLanguageFile(self):
         path = make_lang_data_1()
-        rows = export_lang_templates.getRowsFromLanguageFile(path)
+        rows = lang_templates.getRowsFromLanguageFile(path)
         self.assertEquals(3, len(rows))
 
     def testGetLanguageFilesDelta(self):
         path1 = make_lang_data_1()
         path2 = make_lang_data_2()
 
-        rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
+        rows = lang_templates.getLanguageFilesDelta(path1, path2)
         print rows
         self.assertEquals(2, len(rows))
         deltaKeys = set([row.key for row in rows.values()])
@@ -107,30 +107,30 @@ class TestTemplates(unittest.TestCase):
         hnd, path = tempfile.mkstemp()
         os.close(hnd)
         make_xls_data(path)
-        rows = export_lang_templates.getRowsFromXLS(path)
+        rows = lang_templates.getRowsFromXLS(path)
         self.assertEquals(2, len(rows))
 
     def testMakeTemplateFileFromDeltaRows(self):
         path1 = make_lang_data_1()
         path2 = make_lang_data_2()
 
-        deltaRowsByHash = export_lang_templates.getLanguageFilesDelta(path1, path2)
+        deltaRowsByHash = lang_templates.getLanguageFilesDelta(path1, path2)
         hnd, pathTemplateXLS = tempfile.mkstemp()
         os.close(hnd)
-        deltaTemplateXLS = export_lang_templates.makeTemplateFileFromDeltaRows(deltaRowsByHash.values(), pathTemplateXLS, "DE")
+        deltaTemplateXLS = lang_templates.makeTemplateFileFromDeltaRows(deltaRowsByHash.values(), pathTemplateXLS, "DE")
         
     def testGetGitRepositoryFiles(self):
-        path1, path2 = export_lang_templates.getGitRepositoryFiles("develop~30", "develop~1", 
+        path1, path2 = lang_templates.getGitRepositoryFiles("develop~30", "develop~1", 
                              "src/main/java/celtech/resources/i18n/LanguageData.properties")
-        rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
+        rows = lang_templates.getLanguageFilesDelta(path1, path2)
 
     def testUpdatePropertiesFileFromCompletedTemplate(self):
         propertiesFilePath = make_properties_file()
         templateXLSPath = make_xls_completed_template()
-        export_lang_templates.updatePropertiesFileFromTemplate(propertiesFilePath, templateXLSPath)   
+        lang_templates.updatePropertiesFileFromTemplate(propertiesFilePath, templateXLSPath)   
         print "YY"
         print file(propertiesFilePath).read()
-        rows = export_lang_templates.getRowsFromLanguageFile(propertiesFilePath)
+        rows = lang_templates.getRowsFromLanguageFile(propertiesFilePath)
         print "XX"
         for row in rows.values():
             print row
