@@ -31,6 +31,31 @@ def make_xls_data(path):
     write_xls(path, 'Demo', hdngs, data)
 
 
+def make_properties_file():
+    hnd, path = tempfile.mkstemp()
+    os.close(hnd)
+    propertiesFile = open(path, "rw+")
+    propertiesFile.write("""
+dialogs.key1=K1
+dialogs.key2=K2
+error.error1=E1
+error.error2=E2
+""")
+    propertiesFile.close()
+    return path
+
+def make_xls_completed_template():
+    hnd, path = tempfile.mkstemp()
+    os.close(hnd)
+    hdngs = ['Hash', 'English', 'Translation']
+    kinds = 'text text text'.split()
+    data = [
+        [export_lang_templates.getHashForString("dialogs.key2"), "K2", "Translation K2"],
+        [export_lang_templates.getHashForString("error.error1"), "E1", "Translation E1"]]
+    write_xls(path, 'Demo', hdngs, data)
+    return path                     
+
+
 def make_lang_data_1(): 
     hnd, path = tempfile.mkstemp()
     os.close(hnd)
@@ -66,7 +91,6 @@ class TestTemplates(unittest.TestCase):
     def testGetRowsFromLanguageFile(self):
         path = make_lang_data_1()
         rows = export_lang_templates.getRowsFromLanguageFile(path)
-        print rows
         self.assertEquals(3, len(rows))
 
     def testGetLanguageFilesDelta(self):
@@ -84,7 +108,6 @@ class TestTemplates(unittest.TestCase):
         os.close(hnd)
         make_xls_data(path)
         rows = export_lang_templates.getRowsFromXLS(path)
-        print rows
         self.assertEquals(3, len(rows))
 
     def testMakeTemplateFileFromDeltaRows(self):
@@ -100,3 +123,12 @@ class TestTemplates(unittest.TestCase):
         path1, path2 = export_lang_templates.getGitRepositoryFiles("develop~30", "develop~1", 
                              "src/main/java/celtech/resources/i18n/LanguageData.properties")
         rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
+
+    def testUpdatePropertiesFileFromCompletedTemplate(self):
+        propertiesFilePath = make_properties_file()
+        templateXLSPath = make_xls_completed_template()
+        export_lang_templates.updatePropertiesFileFromTemplate(propertiesFilePath, templateXLSPath)                 
+        rows = export_lang_templates.getRowsFromLanguageFile(propertiesFilePath)
+        print "XX"
+        for row in rows.values():
+            print row

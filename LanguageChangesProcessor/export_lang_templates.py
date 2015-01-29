@@ -11,6 +11,7 @@ RESOURCES_DIR=os.path.join(CELTECH_REPO_DIR, "src", "main", "java", "celtech", "
 TEMPLATES_PATH="/tmp/templates"
 LANG_CODES=["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "zh_SG", "zh_TW"]
 
+
 class Row(object):
 
     def __init__(self):
@@ -38,7 +39,7 @@ class Row(object):
             self.isValid = False
 
     def __repr__(self):
-        return "<Row %s %s %s %s>" % (self.rowNum, self.hash_, self.english, self.translation)
+        return "<Row %s K:%s H:%s E:%s T:%s>" % (self.rowNum, self.key, self.hash_, self.english, self.translation)
 
 
 def getGitRepositoryFiles(tagOriginal, tagNew, filePath):
@@ -95,13 +96,17 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
     """
     rowsOriginal = getRowsFromLanguageFile(pathOriginal)
     rowsNew = getRowsFromLanguageFile(pathNew)
-    # changed and new rows will have a hash that does not exist in the original
+    # new rows will have a hash that does not exist in the original
     originalHashes = set(rowsOriginal.keys())
     newHashes = set(rowsNew.keys())
     changedHashes = newHashes.difference(originalHashes)
     deltaRows = {}
     for hash_ in changedHashes:
         deltaRows[hash_] = rowsNew[hash_]
+    # add rows where english has changed for same key
+    for hash_, row in rowsNew.iteritems():
+        if hash_ in rowsOriginal and row.english != rowsOriginal[hash_].english:
+            deltaRows[hash_] = row
     return deltaRows
 
 
@@ -149,10 +154,14 @@ def makeTemplateFiles(tagOriginal, tagNew):
                          "src/main/java/celtech/resources/i18n/LanguageData.properties")
     deltaRowsByHash = getLanguageFilesDelta(path1, path2)
     for langCode in LANG_CODES:
-        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".properties")
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".xls")
         deltaTemplateXLS = makeTemplateFileFromDeltaRows(
             deltaRowsByHash.values(), pathTemplateXLS, langCode)
         
+
+def updatePropertiesFileFromTemplate(propertiesPath, templateXLSPath):
+    return
+
 
 
 if __name__ == "__main__":
