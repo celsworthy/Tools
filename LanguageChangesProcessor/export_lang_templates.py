@@ -72,6 +72,23 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
     return deltaRows
 
 
+def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
+    workbook = xlwt.Workbook(encoding="UTF-8")
+    sheet = workbook.add_sheet("Translations - " + languageCode)
+    headings = ["Hash", "English", "Translation"]
+    rowx = 0
+    for colx, value in enumerate(headings):
+        sheet.write(rowx, colx, value)
+        #sheet.set_panes_frozen(True) # frozen headings instead of split panes
+        #sheet.set_horz_split_pos(rowx+1) # in general, freeze after last heading row
+        #sheet.set_remove_splits(True) # if user does unfreeze, don't leave a split there
+    for row in deltaRows:
+        rowx += 1
+        sheet.write(rowx, 0, row.hash_)
+        sheet.write(rowx, 1, row.english)
+    workbook.save(pathTemplateXLS)
+
+
 def getRowsFromXLS(pathToXLS):
     """
     Convert the contents of the file to a dictionary of Rows keyed

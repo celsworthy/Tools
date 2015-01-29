@@ -31,7 +31,10 @@ def make_xls_data(path):
     write_xls(path, 'Demo', hdngs, data)
 
 
-def make_lang_data_1(path):
+def make_lang_data_1(): 
+    hnd, path = tempfile.mkstemp()
+    os.close(hnd)
+
     data = """application.title=Robox® AutoMaker™
 aboutPanel.applicationNamePart1=Auto
 aboutPanel.applicationNamePart2=Maker
@@ -39,8 +42,13 @@ aboutPanel.applicationNamePart2=Maker
     f = file(path, "rw+")
     f.write(data)
     f.close()
+    return path
 
-def make_lang_data_2(path):
+
+def make_lang_data_2():
+    hnd, path = tempfile.mkstemp()
+    os.close(hnd)
+
     data = """application.title=Robox2® AutoMaker™
 aboutPanel.applicationNamePart1=Auto
 aboutPanel.applicationNamePart2=Maker
@@ -49,32 +57,21 @@ dialogs.mess=Message
     f = file(path, "rw+")
     f.write(data)
     f.close()
+    return path
+
 
 class TestTemplates(unittest.TestCase):
 
-    def testA(self):
-        return True
-
-    def testHashEnglish(self):
-        """
-        Test that the English language is hashed correctly
-        """
 
     def testGetRowsFromLanguageFile(self):
-        hnd, path = tempfile.mkstemp()
-        os.close(hnd)
-        make_lang_data_1(path)
+        path = make_lang_data_1()
         rows = export_lang_templates.getRowsFromLanguageFile(path)
         print rows
         self.assertEquals(3, len(rows))
 
     def testGetLanguageFilesDelta(self):
-        hnd, path1 = tempfile.mkstemp()
-        os.close(hnd)
-        make_lang_data_1(path1)
-        hnd, path2 = tempfile.mkstemp()
-        os.close(hnd)
-        make_lang_data_2(path2)
+        path1 = make_lang_data_1()
+        path2 = make_lang_data_2()
 
         rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
         print rows
@@ -89,3 +86,15 @@ class TestTemplates(unittest.TestCase):
         rows = export_lang_templates.getRowsFromXLS(path)
         print rows
         self.assertEquals(3, len(rows))
+
+    def testMakeTemplateFileFromDeltaRows(self):
+        path1 = make_lang_data_1()
+        path2 = make_lang_data_2()
+
+        deltaRowsByHash = export_lang_templates.getLanguageFilesDelta(path1, path2)
+        hnd, pathTemplateXLS = tempfile.mkstemp()
+        os.close(hnd)
+        #deltaTemplateXLS = makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode)
+        deltaTemplateXLS = export_lang_templates.makeTemplateFileFromDeltaRows(
+            deltaRowsByHash.values(), "/tmp/DEOUT.xls", "DE")
+        
