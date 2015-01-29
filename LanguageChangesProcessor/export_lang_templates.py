@@ -3,7 +3,13 @@ import xlwt
 import hashlib
 import subprocess
 import os
+import sys
 import tempfile
+
+CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
+RESOURCES_DIR=os.path.join(CELTECH_REPO_DIR, "src", "main", "java", "celtech", "resources", "i18n")
+TEMPLATES_PATH="/tmp/templates"
+LANG_CODES=["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "zh_SG", "zh_TW"]
 
 class Row(object):
 
@@ -17,9 +23,9 @@ class Row(object):
             self.key = None
             self.english = sheet.cell_value(rowNum, 1)
             self.translation = sheet.cell_value(rowNum, 2)
-            self.hash_ = getHashForEnglish(self.english)
+            self.hash_ = sheet.cell_value(rowNum, 0)
         except Exception:
-            self.isVaid = False
+            self.isValid = False
 
     def fromLine(self, line):
         self.isValid = True
@@ -27,16 +33,16 @@ class Row(object):
             self.rowNum = None
             self.key, self.english = line.split('=')
             self.translation = None
-            self.hash_ = getHashForEnglish(self.english)
+            self.hash_ = getHashForString(self.key)
         except Exception:
-            self.isVaid = False
+            self.isValid = False
 
     def __repr__(self):
         return "<Row %s %s %s %s>" % (self.rowNum, self.hash_, self.english, self.translation)
 
 
 def getGitRepositoryFiles(tagOriginal, tagNew, filePath):
-    os.chdir("/home/tony/NetBeansProjects/celtechcore")
+    os.chdir(CELTECH_REPO_DIR)
 
     hnd1, path1 = tempfile.mkstemp()
     hnd2, path2 = tempfile.mkstemp()
@@ -50,9 +56,10 @@ def getGitRepositoryFiles(tagOriginal, tagNew, filePath):
     return path1, path2
 
 
-def getHashForEnglish(englishString):
+def getHashForString(keyString):
     # returning a cut down string with this hash method is safe and effective, according to Google
-    return hashlib.sha1(englishString).hexdigest()[:10]
+    # the length 10 can be increased in case of hash collisions (unlikely) and templates regenerated
+    return hashlib.sha1(keyString).hexdigest()[:10]
 
 
 def getChangedRows(rowsFileOriginal, rowsFileNew):
@@ -71,11 +78,21 @@ def getRowsFromLanguageFile(pathToLanguageFile):
             row = Row()
             row.fromLine(line)
             if row.isValid:
+                if row.hash_ in rowsByHash:
+                    if row.key == rowsByHash[row.hash_].key:
+                        print "ERROR: duplicate key found for " + row.key
+                    else:    
+                        raise Exception(
+                            "Fatal Error - duplicate hash values found (%s, %s, %s) - suggest increase hash length"
+                            % (row.hash_, row.key, rowsByHash[row.hash_].key))
                 rowsByHash[row.hash_] = row
     return rowsByHash
 
 
 def getLanguageFilesDelta(pathOriginal, pathNew):
+    """
+    Return one Row for each changed line in the language file, in a dict keyed by hash
+    """
     rowsOriginal = getRowsFromLanguageFile(pathOriginal)
     rowsNew = getRowsFromLanguageFile(pathNew)
     # changed and new rows will have a hash that does not exist in the original
@@ -125,3 +142,18 @@ def getRowsFromXLS(pathToXLS):
         if row.isValid:
             rowsByHash[row.hash_] = row
     return rowsByHash
+
+
+def makeTemplateFiles(tagOriginal, tagNew):
+    path1, path2 = getGitRepositoryFiles(tagOriginal, tagNew, 
+                         "src/main/java/celtech/resources/i18n/LanguageData.properties")
+    deltaRowsByHash = getLanguageFilesDelta(path1, path2)
+    for langCode in LANG_CODES:
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".properties")
+        deltaTemplateXLS = makeTemplateFileFromDeltaRows(
+            deltaRowsByHash.values(), pathTemplateXLS, langCode)
+        
+
+
+if __name__ == "__main__":
+    makeTemplateFiles(sys.argv[1], sys.argv[2])

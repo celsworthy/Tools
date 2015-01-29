@@ -100,4 +100,3 @@ class TestTemplates(unittest.TestCase):
         path1, path2 = export_lang_templates.getGitRepositoryFiles("develop~30", "develop~1", 
                              "src/main/java/celtech/resources/i18n/LanguageData.properties")
         rows = export_lang_templates.getLanguageFilesDelta(path1, path2)
-        print "GITDIFF", rows
