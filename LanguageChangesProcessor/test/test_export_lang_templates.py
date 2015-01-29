@@ -50,7 +50,7 @@ def make_xls_completed_template():
     hdngs = ['Hash', 'English', 'Translation']
     kinds = 'text text text'.split()
     data = [
-        [lang_templates.getHashForString("dialogs.key2"), "K2", "Translation K2"],
+        [lang_templates.getHashForString("dialogs.key2"), "K2", "Translation K2\r\nLine 2"],
         [lang_templates.getHashForString("error.error1"), "E1", "Translation E1"]]
     write_xls(path, 'Demo', hdngs, data)
     return path                     

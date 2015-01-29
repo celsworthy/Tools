@@ -4,20 +4,24 @@ translation strings and apply updated translations.
 
 USAGE:
 
-python lang_templates.py EXPORT originalTag endTag
+$ python lang_templates.py EXPORT originalTag endTag
 
 e.g. python lang_templates.py EXPORT 1.00.17 1.01.00
 
 where originalTag and endTag are e.g. git branches, tags
 
-python lang_templates.py IMPORT
+which creates one .xls template file per language, each containing one row for each changed string
+
+$ python lang_templates.py IMPORT
+
+which, for each language code, updates the LanguageData_??.properties file in the repo with the changes in the .xls file
 """
 
 ########## Configuration ############
 
 # location of celtechcore git repo
-#CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
-CELTECH_REPO_DIR="/home/tony/tmp/celtechcore"
+CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
+#CELTECH_REPO_DIR="/home/tony/tmp/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH="/tmp/templates"
 # codes of languages to be exported / imported
@@ -67,7 +71,7 @@ class Row(object):
             self.isValid = False
 
     def writeToPropertiesFile(self, propertiesFile):
-        propertiesFile.write("%s=%s%s" % (self.key, self.fullString, os.linesep))
+        propertiesFile.write("%s=%s%s" % (self.key, convertFromWindowsLineEndings(self.fullString), os.linesep))
 
     def __repr__(self):
         return "<Row %s K:%s H:%s E:%s T:%s>" % (self.rowNum, self.key, self.hash_, self.fullString, self.translation)
@@ -135,9 +139,13 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
 
 def convertToWindowsLineEndings(unixString):
     """
-    Convert "\n" to CRLF
+    Convert r"\n" to CRLF
     """
     return unixString.replace(r"\n", "\r\n")
+
+
+def convertFromWindowsLineEndings(windowsString):
+    return windowsString.replace("\r\n", r"\n")
 
 
 def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
@@ -149,10 +157,14 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     for colx, value in enumerate(headings):
         sheet.write(rowx, colx, value)
     for row in deltaRows:
+        style = xlwt.XFStyle()
+        alignment = xlwt.Alignment()
+        alignment.wrap = True
+        style.alignment = alignment
         rowx += 1
         sheet.write(rowx, 0, row.hash_)
-        sheet.write(rowx, 1, convertToWindowsLineEndings(row.fullString))
-        numLines = 1 + row.fullString.count(r"\n")
+        sheet.write(rowx, 1, convertToWindowsLineEndings(row.fullString), style)
+        numLines = 1 + row.fullString.count(r"\n") + len(row.fullString) / 60
         if numLines > 1:
             sheet.row(rowx).height = 350 * numLines
             sheet.row(rowx).height_mismatch = True
@@ -161,6 +173,8 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     sheet.set_horz_split_pos(1)
     sheet.set_vert_split_pos(2)      
     sheet.col(0).hidden = True
+    sheet.col(1).width = 256 * 80 # 80 columns approx
+    sheet.col(2).width = 256 * 80
 
     workbook.save(pathTemplateXLS)
 
