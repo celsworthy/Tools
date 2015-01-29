@@ -133,6 +133,13 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
     return deltaRows
 
 
+def convertToWindowsLineEndings(unixString):
+    """
+    Convert "\n" to CRLF
+    """
+    return unixString.replace(r"\n", "\r\n")
+
+
 def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     workbook = xlwt.Workbook(encoding="UTF-8")
     sheet = workbook.add_sheet("Translations - " + languageCode)
@@ -144,11 +151,16 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     for row in deltaRows:
         rowx += 1
         sheet.write(rowx, 0, row.hash_)
-        sheet.write(rowx, 1, row.fullString)
+        sheet.write(rowx, 1, convertToWindowsLineEndings(row.fullString))
+        numLines = 1 + row.fullString.count(r"\n")
+        if numLines > 1:
+            sheet.row(rowx).height = 350 * numLines
+            sheet.row(rowx).height_mismatch = True
 
     sheet.set_panes_frozen(True) # frozen headings instead of split panes
     sheet.set_horz_split_pos(1)
-    sheet.set_vert_split_pos(2)         
+    sheet.set_vert_split_pos(2)      
+    sheet.col(0).hidden = True
 
     workbook.save(pathTemplateXLS)
 
