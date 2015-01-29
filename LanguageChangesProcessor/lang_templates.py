@@ -21,7 +21,6 @@ which, for each language code, updates the LanguageData_??.properties file in th
 
 # location of celtechcore git repo
 CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
-#CELTECH_REPO_DIR="/home/tony/tmp/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH="/tmp/templates"
 # codes of languages to be exported / imported
@@ -37,8 +36,8 @@ import os
 import sys
 import tempfile
 
-
-RESOURCES_DIR=os.path.join(CELTECH_REPO_DIR, "src", "main", "java", "celtech", "resources", "i18n")
+RESOURCES_SUBDIR=os.path.join("src", "main", "java", "celtech", "resources", "i18n")
+RESOURCES_DIR=os.path.join(CELTECH_REPO_DIR, RESOURCES_SUBDIR)
 
 
 class Row(object):
@@ -160,6 +159,7 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
         style = xlwt.XFStyle()
         alignment = xlwt.Alignment()
         alignment.wrap = True
+        alignment.vert = xlwt.Alignment.VERT_TOP
         style.alignment = alignment
         rowx += 1
         sheet.write(rowx, 0, row.hash_)
@@ -199,7 +199,7 @@ def getRowsFromXLS(pathToXLS):
 
 def makeTemplateFiles(tagOriginal, tagNew):
     path1, path2 = getGitRepositoryFiles(tagOriginal, tagNew, 
-                         "src/main/java/celtech/resources/i18n/LanguageData.properties")
+                         os.path.join(RESOURCES_SUBDIR, "LanguageData.properties"))
     deltaRowsByHash = getLanguageFilesDelta(path1, path2)
     for langCode in LANG_CODES:
         pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".xls")
