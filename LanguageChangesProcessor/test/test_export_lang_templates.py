@@ -108,7 +108,7 @@ class TestTemplates(unittest.TestCase):
         os.close(hnd)
         make_xls_data(path)
         rows = export_lang_templates.getRowsFromXLS(path)
-        self.assertEquals(3, len(rows))
+        self.assertEquals(2, len(rows))
 
     def testMakeTemplateFileFromDeltaRows(self):
         path1 = make_lang_data_1()
@@ -127,7 +127,9 @@ class TestTemplates(unittest.TestCase):
     def testUpdatePropertiesFileFromCompletedTemplate(self):
         propertiesFilePath = make_properties_file()
         templateXLSPath = make_xls_completed_template()
-        export_lang_templates.updatePropertiesFileFromTemplate(propertiesFilePath, templateXLSPath)                 
+        export_lang_templates.updatePropertiesFileFromTemplate(propertiesFilePath, templateXLSPath)   
+        print "YY"
+        print file(propertiesFilePath).read()
         rows = export_lang_templates.getRowsFromLanguageFile(propertiesFilePath)
         print "XX"
         for row in rows.values():

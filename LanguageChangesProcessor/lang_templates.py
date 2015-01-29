@@ -1,3 +1,29 @@
+"""
+This module handles the import and export of language template XLS files which are used to detect changed
+translation strings and apply updated translations.
+
+USAGE:
+
+python lang_templates.py EXPORT originalTag endTag
+
+e.g. python lang_templates.py EXPORT 1.00.17 1.01.00
+
+where originalTag and endTag are e.g. git branches, tags
+
+python lang_templates.py IMPORT
+"""
+
+########## Configuration ############
+
+# location of celtechcore git repo
+CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
+# directory were templates are to be exported to and imported from
+TEMPLATES_PATH="/tmp/templates"
+# codes of languages to be exported / imported
+LANG_CODES=["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "zh_SG", "zh_TW"]
+
+#####################################
+
 import xlrd
 import xlwt
 import hashlib
@@ -6,13 +32,14 @@ import os
 import sys
 import tempfile
 
-CELTECH_REPO_DIR="/home/tony/NetBeansProjects/celtechcore"
+
 RESOURCES_DIR=os.path.join(CELTECH_REPO_DIR, "src", "main", "java", "celtech", "resources", "i18n")
-TEMPLATES_PATH="/tmp/templates"
-LANG_CODES=["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "zh_SG", "zh_TW"]
 
 
 class Row(object):
+    """
+    The Row class represents both a row in a properties file and a row in an XLS file
+    """
 
     def __init__(self):
         pass
@@ -22,7 +49,7 @@ class Row(object):
         try:
             self.rowNum = rowNum
             self.key = None
-            self.english = sheet.cell_value(rowNum, 1)
+            self.fullString = sheet.cell_value(rowNum, 1)
             self.translation = sheet.cell_value(rowNum, 2)
             self.hash_ = sheet.cell_value(rowNum, 0)
         except Exception:
@@ -32,14 +59,17 @@ class Row(object):
         self.isValid = True
         try:
             self.rowNum = None
-            self.key, self.english = line.split('=')
+            self.key, self.fullString = line.split('=')
             self.translation = None
             self.hash_ = getHashForString(self.key)
         except Exception:
             self.isValid = False
 
+    def writeToPropertiesFile(self, propertiesFile):
+        propertiesFile.write("%s=%s%s" % (self.key, self.fullString, os.linesep))
+
     def __repr__(self):
-        return "<Row %s K:%s H:%s E:%s T:%s>" % (self.rowNum, self.key, self.hash_, self.english, self.translation)
+        return "<Row %s K:%s H:%s E:%s T:%s>" % (self.rowNum, self.key, self.hash_, self.fullString, self.translation)
 
 
 def getGitRepositoryFiles(tagOriginal, tagNew, filePath):
@@ -61,14 +91,6 @@ def getHashForString(keyString):
     # returning a cut down string with this hash method is safe and effective, according to Google
     # the length 10 can be increased in case of hash collisions (unlikely) and templates regenerated
     return hashlib.sha1(keyString).hexdigest()[:10]
-
-
-def getChangedRows(rowsFileOriginal, rowsFileNew):
-    """
-    Return the changed or new rows, i.e. rows where the hash exists in 
-    the new file but not the original
-    """
-    return
 
 
 def getRowsFromLanguageFile(pathToLanguageFile):
@@ -103,9 +125,9 @@ def getLanguageFilesDelta(pathOriginal, pathNew):
     deltaRows = {}
     for hash_ in changedHashes:
         deltaRows[hash_] = rowsNew[hash_]
-    # add rows where english has changed for same key
+    # add rows where fullString has changed for same key
     for hash_, row in rowsNew.iteritems():
-        if hash_ in rowsOriginal and row.english != rowsOriginal[hash_].english:
+        if hash_ in rowsOriginal and row.fullString != rowsOriginal[hash_].fullString:
             deltaRows[hash_] = row
     return deltaRows
 
@@ -121,7 +143,7 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     for row in deltaRows:
         rowx += 1
         sheet.write(rowx, 0, row.hash_)
-        sheet.write(rowx, 1, row.english)
+        sheet.write(rowx, 1, row.fullString)
 
     sheet.set_panes_frozen(True) # frozen headings instead of split panes
     sheet.set_horz_split_pos(1)
@@ -140,8 +162,7 @@ def getRowsFromXLS(pathToXLS):
     workbook = xlrd.open_workbook(pathToXLS)
     sheet = workbook.sheet_by_index(0)
 
-    numRows = 3
-    for rowNum in range(numRows):
+    for rowNum in range(1, sheet.nrows):
         row = Row()
         row.fromSheet(sheet, rowNum)
         if row.isValid:
@@ -159,10 +180,24 @@ def makeTemplateFiles(tagOriginal, tagNew):
             deltaRowsByHash.values(), pathTemplateXLS, langCode)
         
 
-def updatePropertiesFileFromTemplate(propertiesPath, templateXLSPath):
-    return
+def writePropertiesFile(path, rows):
+    rows.sort(key=lambda x: x.key)
+    propertiesFile = open(path, "rw+")
+    for row in rows:
+        row.writeToPropertiesFile(propertiesFile)
+    propertiesFile.close()
 
+
+def updatePropertiesFileFromTemplate(propertiesPath, templateXLSPath):
+    propertiesRows = getRowsFromLanguageFile(propertiesPath)
+    templateXLSRows = getRowsFromXLS(templateXLSPath)
+    for hash_, row in templateXLSRows.iteritems():
+        propertiesRows[hash_].fullString = row.translation
+    writePropertiesFile(propertiesPath, propertiesRows.values())
 
 
 if __name__ == "__main__":
-    makeTemplateFiles(sys.argv[1], sys.argv[2])
+    if sys.argv[1] == "EXPORT":
+        makeTemplateFiles(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "IMPORT":
+        importTemplateFiles()
