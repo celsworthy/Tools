@@ -147,6 +147,23 @@ def convertFromWindowsLineEndings(windowsString):
     return windowsString.replace("\r\n", r"\n")
 
 
+def makeDefaultStyle():
+    style = xlwt.XFStyle()
+    alignment = xlwt.Alignment()
+    alignment.wrap = True
+    alignment.vert = xlwt.Alignment.VERT_TOP
+    style.alignment = alignment
+    return style
+
+
+def makeEditStyle():
+    style = makeDefaultStyle()
+    protection = xlwt.Protection()
+    protection.cell_locked = False
+    style.protection = protection
+    return style
+
+
 def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     workbook = xlwt.Workbook(encoding="UTF-8")
     sheet = workbook.add_sheet("Translations - " + languageCode)
@@ -169,15 +186,12 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
         sheet.write(rowx, colx, value, boldLargeFontStyle)
     for row in deltaRows:
         rowx += 1
-        style = xlwt.XFStyle()
-        alignment = xlwt.Alignment()
-        alignment.wrap = True
-        alignment.vert = xlwt.Alignment.VERT_TOP
-        style.alignment = alignment
+        style = makeDefaultStyle()
+        allowEditStyle = makeEditStyle()
         sheet.write(rowx, 0, row.hash_)
         sheet.write(rowx, 1, convertToWindowsLineEndings(row.fullString), style)
         # Only required for first iteration with Jacqui - normally translation should go out blank
-        sheet.write(rowx, 2, convertToWindowsLineEndings(row.translation), style)
+        sheet.write(rowx, 2, convertToWindowsLineEndings(row.translation), allowEditStyle)
         numLines = 1 + row.fullString.count(r"\n") + len(row.fullString) / 60
         if numLines > 1:
             sheet.row(rowx).height = 350 * numLines
@@ -187,11 +201,13 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     sheet.row(1).height = 500
 
     sheet.set_panes_frozen(True) # frozen headings instead of split panes
-    sheet.set_horz_split_pos(1)
+    sheet.set_horz_split_pos(2)
     sheet.set_vert_split_pos(2)      
     #sheet.col(0).hidden = True
     sheet.col(1).width = 256 * 80 # 80 columns approx
     sheet.col(2).width = 256 * 80
+
+    sheet.protect = True
 
     workbook.save(pathTemplateXLS)
 
