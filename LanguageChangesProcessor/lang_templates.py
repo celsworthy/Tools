@@ -172,7 +172,7 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     sheet.set_panes_frozen(True) # frozen headings instead of split panes
     sheet.set_horz_split_pos(1)
     sheet.set_vert_split_pos(2)      
-    sheet.col(0).hidden = True
+    #sheet.col(0).hidden = True
     sheet.col(1).width = 256 * 80 # 80 columns approx
     sheet.col(2).width = 256 * 80
 
