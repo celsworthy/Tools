@@ -38,7 +38,7 @@ import tempfile
 
 RESOURCES_SUBDIR=os.path.join("src", "main", "java", "celtech", "resources", "i18n")
 RESOURCES_DIR=os.path.join(CELTECH_REPO_DIR, RESOURCES_SUBDIR)
-
+HOW_TO_EDIT_NOTE="""Please note, do NOT add or remove any rows to this spreadsheet. Only edit the translation column."""
 
 class Row(object):
     """
@@ -151,23 +151,40 @@ def makeTemplateFileFromDeltaRows(deltaRows, pathTemplateXLS, languageCode):
     workbook = xlwt.Workbook(encoding="UTF-8")
     sheet = workbook.add_sheet("Translations - " + languageCode)
 
-    headings = ["Hash", "English", "Translation"]
+    boldLargeFontStyle = xlwt.XFStyle()
+    font = xlwt.Font()
+    font.bold = True
+    font.height = 400
+    boldLargeFontStyle.font = font
+    alignment = xlwt.Alignment()
+    alignment.wrap = True
+    alignment.vert = xlwt.Alignment.VERT_TOP
+    boldLargeFontStyle.alignment = alignment
+
+    headings = ["", "English", "Translation"]
     rowx = 0
+    sheet.write(rowx, 1, HOW_TO_EDIT_NOTE, boldLargeFontStyle)
+    rowx += 1
     for colx, value in enumerate(headings):
-        sheet.write(rowx, colx, value)
+        sheet.write(rowx, colx, value, boldLargeFontStyle)
     for row in deltaRows:
+        rowx += 1
         style = xlwt.XFStyle()
         alignment = xlwt.Alignment()
         alignment.wrap = True
         alignment.vert = xlwt.Alignment.VERT_TOP
         style.alignment = alignment
-        rowx += 1
         sheet.write(rowx, 0, row.hash_)
         sheet.write(rowx, 1, convertToWindowsLineEndings(row.fullString), style)
+        # Only required for first iteration with Jacqui - normally translation should go out blank
+        sheet.write(rowx, 2, convertToWindowsLineEndings(row.translation), style)
         numLines = 1 + row.fullString.count(r"\n") + len(row.fullString) / 60
         if numLines > 1:
             sheet.row(rowx).height = 350 * numLines
             sheet.row(rowx).height_mismatch = True
+
+    sheet.row(0).height = 1500
+    sheet.row(1).height = 500
 
     sheet.set_panes_frozen(True) # frozen headings instead of split panes
     sheet.set_horz_split_pos(1)
@@ -197,11 +214,24 @@ def getRowsFromXLS(pathToXLS):
     return rowsByHash
 
 
+def updateDeltaRowsWithLatestTranslations(deltaRows, langCode):
+    translationPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
+    translationRows = getRowsFromLanguageFile(translationPropertiesFile)
+    for row in deltaRows:
+        row.translation = ""
+        if row.hash_ in translationRows and len(translationRows[row.hash_].fullString) > 0:
+            row.translation = translationRows[row.hash_].fullString
+
 def makeTemplateFiles(tagOriginal, tagNew):
     path1, path2 = getGitRepositoryFiles(tagOriginal, tagNew, 
                          os.path.join(RESOURCES_SUBDIR, "LanguageData.properties"))
     deltaRowsByHash = getLanguageFilesDelta(path1, path2)
+
     for langCode in LANG_CODES:
+        # this should only be run on the initial iteration with Jacqui as usually the translation
+        # should be left blank in the XLS
+        updateDeltaRowsWithLatestTranslations(deltaRowsByHash.values(), langCode)
+
         pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".xls")
         deltaTemplateXLS = makeTemplateFileFromDeltaRows(
             deltaRowsByHash.values(), pathTemplateXLS, langCode)
