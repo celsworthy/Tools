@@ -163,6 +163,19 @@ public class LanguageFileProcessor
             valueToOutput = localisedValue;
         }
 
+//        valueToOutput = applySubstitions(propertyName, templateValuesForLocale, valueToOutput);
+
+        String lineToOutput = propertyName + "=" + valueToOutput + "\r\n";
+
+        for (PrintWriter localeFileWriter : localeFileWriters)
+        {
+            localeFileWriter.write(lineToOutput);
+        }
+    }
+
+    private static String applySubstitions(String propertyName,
+        Map<String, String> templateValuesForLocale, String valueToOutput)
+    {
         // NB substitutions MUST come before usages in tsv file. Keys must have exactly two digits (UGH)
         // e.g. *T08
         if (propertyName.startsWith("*T"))
@@ -182,13 +195,7 @@ public class LanguageFileProcessor
                 steno.info("Output was " + valueToOutput);
             }
         }
-
-        String lineToOutput = propertyName + "=" + valueToOutput + "\r\n";
-
-        for (PrintWriter localeFileWriter : localeFileWriters)
-        {
-            localeFileWriter.write(lineToOutput);
-        }
+        return valueToOutput;
     }
 
     private static boolean createFile(String localeFileName,
