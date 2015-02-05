@@ -22,12 +22,15 @@ THE PROCESS IS:
 The developer identifies the start and end commits across which changes were made to the LanguageData.properties file.
 
 He then runs the EXPORT command, which
-0) Extracts LanguageData.properties from Git for the two commits, and works out what keys are new and for what
+0) Extracts LanguageData.properties from Git for the two commits, and works out which keys are new and for which
 keys the english has changed
 1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for each new language key and for
  messages where the english has changed.
 2) Updates the other language properties files for the new/changed lines to have the new english translation. This
  is done so that a version can be released before the completed template files have been processed.
+3) If there is not currently any LanguageData_??.properties file for the requested language code, then one is
+created by copying from LanguageData.properties, and the template XLS file is created with all rows from
+LanguageData.properties and all translations blank.
 
 After the XLS templates have been updated with the correct translations, the developer then runs the IMPORT command,
 which updates the appropriate language properties files with the new translations in the XLS files. It will also
@@ -37,14 +40,16 @@ to the zh_TW and zh_SG versions.
 
 ########## Configuration ############
 # location of celtechcore git repo
+from reportlab.pdfbase.cidfonts import precalculate
+
 CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH = "/tmp/templates"
 # codes of languages to be exported / imported
-LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK"]#, "fr", "es"]
+LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
-ALIASES = {"sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
+ALIASES = {"fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
            "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese"}
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
@@ -272,8 +277,8 @@ def get_rows_from_XLS(pathToXLS):
     return rowsByHash
 
 
-def update_delta_rows_with_latest_translations(deltaRows, langCode):
-    translationPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
+def update_delta_rows_with_latest_translations(deltaRows, lang_code):
+    translationPropertiesFile = get_properties_file_path(lang_code)
     translationRows = get_rows_from_language_file(translationPropertiesFile)
     for row in deltaRows:
         row.translation = ""
@@ -281,29 +286,54 @@ def update_delta_rows_with_latest_translations(deltaRows, langCode):
             row.translation = translationRows[row.hash_].full_string
 
 
+def make_new_language_properties_file(lang_code):
+    """
+    If a language code has been requested but there is no LanguageData_??.properties file for it,
+    then create it by copying it from the LanguageData.properties file and clearing the translations
+    """
+    newPropertiesFilePath = get_properties_file_path(lang_code)
+    engPropertiesFilePath = get_properties_file_path(None)
+    shutil.copy(engPropertiesFilePath, newPropertiesFilePath)
+
+
+def no_properties_file_for_lang_code(lang_code):
+    """
+    Return true if there is no properties for the give lang_code
+    """
+    propertiesFilePath = get_properties_file_path(lang_code)
+    return not os.path.exists(propertiesFilePath)
+
+
 def make_template_files(tagOriginal, tagNew, deadlineDate):
-    path1, path2 = get_git_repository_files(tagOriginal, tagNew,
+    path_to_first_revision, path_to_second_revision = get_git_repository_files(tagOriginal, tagNew,
                          os.path.join(RESOURCES_SUBDIR, "LanguageData.properties"))
-    deltaRowsByHash = get_language_files_delta(path1, path2)
+    delta_rows_by_hash = get_language_files_delta(path_to_first_revision, path_to_second_revision)
 
-    for langCode in LANG_CODES:
-        # this should only be run on the initial iteration with Jacqui as usually the translation
-        # should be left blank in the XLS
-        update_delta_rows_with_latest_translations(deltaRowsByHash.values(), langCode)
+    for lang_code in LANG_CODES:
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[lang_code] + ".xls")
+        if no_properties_file_for_lang_code(lang_code):
+            make_new_language_properties_file(lang_code)
+            delta_rows_by_hash = get_rows_from_language_file(path_to_second_revision)
+            for row in delta_rows_by_hash.values():
+                row.translation = ""
+            make_template_file_from_delta_rows(delta_rows_by_hash.values(), pathTemplateXLS, lang_code, deadlineDate)
+        else:
+            # this should only be run on the initial iteration with Jacqui as usually the translation
+            # should be left blank in the XLS
+            update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
+            ########################################
 
-        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[langCode] + ".xls")
-        make_template_file_from_delta_rows(deltaRowsByHash.values(), pathTemplateXLS, langCode, deadlineDate)
-
-        fill_in_english_from_delta_rows(deltaRowsByHash.values(), langCode)
+            make_template_file_from_delta_rows(delta_rows_by_hash.values(), pathTemplateXLS, lang_code, deadlineDate)
+            fill_in_english_from_delta_rows(delta_rows_by_hash.values(), lang_code)
 
 
-def fill_in_english_from_delta_rows(deltaRows, langCode):
+def fill_in_english_from_delta_rows(deltaRows, lang_code):
     """
     Update the language properties file with the new english, so that a release can be made (if necessary)
     before the updated templates are returned
     """
-    translationPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
-    englishPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData.properties")
+    translationPropertiesFile = get_properties_file_path(lang_code)
+    englishPropertiesFile = get_properties_file_path(None)
     translationRows = get_rows_from_language_file(translationPropertiesFile)
     englishRows = get_rows_from_language_file(englishPropertiesFile)
     for row in deltaRows:
@@ -342,21 +372,24 @@ def copy_language_files():
     Copy the language files as specified in COPIES
     """
     for copy_from_lang_code, copy_to_list in COPIES.iteritems():
-        copy_from_properties_file = getPropertiesFilePath(copy_from_lang_code)
+        copy_from_properties_file = get_properties_file_path(copy_from_lang_code)
         for copy_to_lang_code in copy_to_list:
-            copy_to_properties_file = getPropertiesFilePath(copy_to_lang_code)
+            copy_to_properties_file = get_properties_file_path(copy_to_lang_code)
             shutil.copy(copy_from_properties_file, copy_to_properties_file)
 
 
-def getPropertiesFilePath(langCode):
-    pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
+def get_properties_file_path(lang_code):
+    if lang_code is None:
+        pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData.properties")
+    else:
+        pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + lang_code + ".properties")
     return pathPropertiesFile
 
 
 def import_template_files():
-    for langCode in LANG_CODES:
-        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[langCode] + ".xls")
-        pathPropertiesFile = getPropertiesFilePath(langCode)
+    for lang_code in LANG_CODES:
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[lang_code] + ".xls")
+        pathPropertiesFile = get_properties_file_path(lang_code)
         update_properties_file_from_template(pathPropertiesFile, pathTemplateXLS)
     copy_language_files()
 
