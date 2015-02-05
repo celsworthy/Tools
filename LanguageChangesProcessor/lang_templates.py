@@ -15,6 +15,24 @@ which creates one .xls template file per language, each containing one row for e
 $ python lang_templates.py IMPORT
 
 which, for each language code, updates the LanguageData_??.properties file in the repo with the changes in the .xls file
+
+
+THE PROCESS IS:
+
+The developer identifies the start and end commits across which changes were made to the LanguageData.properties file.
+
+He then runs the EXPORT command, which
+0) Extracts LanguageData.properties from Git for the two commits, and works out what keys are new and for what
+keys the english has changed
+1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for each new language key and for
+ messages where the english has changed.
+2) Updates the other language properties files for the new/changed lines to have the new english translation. This
+ is done so that a version can be released before the completed template files have been processed.
+
+After the XLS templates have been updated with the correct translations, the developer then runs the IMPORT command,
+which updates the appropriate language properties files with the new translations in the XLS files. It will also
+copy any language properties files as required, for instance the LanguageData_zh_HK.properties file will be copied
+to the zh_TW and zh_SG versions.
 """
 
 ########## Configuration ############
@@ -24,7 +42,6 @@ CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 TEMPLATES_PATH = "/tmp/templates"
 # codes of languages to be exported / imported
 LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK"]#, "fr", "es"]
-LANG_CODES = ["ko"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
 ALIASES = {"sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
@@ -40,6 +57,7 @@ import subprocess
 import os
 import sys
 import tempfile
+import shutil
 
 
 def make_reverse_aliases(aliases):
@@ -319,11 +337,28 @@ def update_properties_file_from_template(propertiesPath, templateXLSPath):
     write_properties_file(propertiesPath, propertiesRows.values())
 
 
+def copy_language_files():
+    """
+    Copy the language files as specified in COPIES
+    """
+    for copy_from_lang_code, copy_to_list in COPIES.iteritems():
+        copy_from_properties_file = getPropertiesFilePath(copy_from_lang_code)
+        for copy_to_lang_code in copy_to_list:
+            copy_to_properties_file = getPropertiesFilePath(copy_to_lang_code)
+            shutil.copy(copy_from_properties_file, copy_to_properties_file)
+
+
+def getPropertiesFilePath(langCode):
+    pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
+    return pathPropertiesFile
+
+
 def import_template_files():
     for langCode in LANG_CODES:
         pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[langCode] + ".xls")
-        pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
+        pathPropertiesFile = getPropertiesFilePath(langCode)
         update_properties_file_from_template(pathPropertiesFile, pathTemplateXLS)
+    copy_language_files()
 
 
 if __name__ == "__main__":
