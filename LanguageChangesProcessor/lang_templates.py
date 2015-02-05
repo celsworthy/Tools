@@ -24,7 +24,7 @@ CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 TEMPLATES_PATH = "/tmp/templates"
 # codes of languages to be exported / imported
 LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK"]#, "fr", "es"]
-LANG_CODES = ["de"]
+LANG_CODES = ["ko"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
 ALIASES = {"sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
@@ -73,9 +73,9 @@ class Row(object):
         try:
             self.row_num = rowNum
             self.key = None
-            self.full_string = sheet.cell_value(rowNum, 1)
-            self.translation = sheet.cell_value(rowNum, 2)
-            self.hash_ = sheet.cell_value(rowNum, 0)
+            self.full_string = sheet.cell_value(rowNum, 1).encode('utf-8')
+            self.translation = sheet.cell_value(rowNum, 2).encode('utf-8')
+            self.hash_ = sheet.cell_value(rowNum, 0).encode('utf-8')
         except Exception:
             self.is_valid = False
 
@@ -137,24 +137,24 @@ def get_rows_from_language_file(pathToLanguageFile):
     return rows_by_hash
 
 
-def get_language_files_delta(pathOriginal, pathNew):
+def get_language_files_delta(path_original, path_new):
     """
     Return one Row for each changed line in the language file, in a dict keyed by hash
     """
-    rowsOriginal = get_rows_from_language_file(pathOriginal)
-    rowsNew = get_rows_from_language_file(pathNew)
+    rows_original = get_rows_from_language_file(path_original)
+    rows_new = get_rows_from_language_file(path_new)
     # new rows will have a hash that does not exist in the original
-    originalHashes = set(rowsOriginal.keys())
-    newHashes = set(rowsNew.keys())
-    changedHashes = newHashes.difference(originalHashes)
-    deltaRows = {}
-    for hash_ in changedHashes:
-        deltaRows[hash_] = rowsNew[hash_]
+    original_hashes = set(rows_original.keys())
+    new_hashes = set(rows_new.keys())
+    changed_hashes = new_hashes.difference(original_hashes)
+    delta_rows = {}
+    for hash_ in changed_hashes:
+        delta_rows[hash_] = rows_new[hash_]
     # add rows where full_string has changed for same key
-    for hash_, row in rowsNew.iteritems():
-        if hash_ in rowsOriginal and row.full_string != rowsOriginal[hash_].full_string:
-            deltaRows[hash_] = row
-    return deltaRows
+    for hash_, row in rows_new.iteritems():
+        if hash_ in rows_original and row.full_string != rows_original[hash_].full_string:
+            delta_rows[hash_] = row
+    return delta_rows
 
 
 def convert_to_windows_line_endings(unixString):
@@ -227,7 +227,6 @@ def make_template_file_from_delta_rows(deltaRows, pathTemplateXLS, languageCode,
     sheet.set_panes_frozen(True) # frozen headings instead of split panes
     sheet.set_horz_split_pos(2)
     sheet.set_vert_split_pos(2)      
-    #sheet.col(0).hidden = True
     sheet.col(1).width = 256 * 80 # 80 columns approx
     sheet.col(2).width = 256 * 80
 
@@ -246,7 +245,8 @@ def get_rows_from_XLS(pathToXLS):
     workbook = xlrd.open_workbook(pathToXLS)
     sheet = workbook.sheet_by_index(0)
 
-    for rowNum in range(1, sheet.nrows):
+    START_ROW_IX = 2
+    for rowNum in range(START_ROW_IX, sheet.nrows):
         row = Row()
         row.from_sheet(sheet, rowNum)
         if row.is_valid:
@@ -321,7 +321,7 @@ def update_properties_file_from_template(propertiesPath, templateXLSPath):
 
 def import_template_files():
     for langCode in LANG_CODES:
-        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + langCode + ".xls")
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[langCode] + ".xls")
         pathPropertiesFile = os.path.join(RESOURCES_DIR, "LanguageData_" + langCode + ".properties")
         update_properties_file_from_template(pathPropertiesFile, pathTemplateXLS)
 
