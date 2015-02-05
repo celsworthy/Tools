@@ -4,11 +4,11 @@ translation strings and apply updated translations.
 
 USAGE:
 
-$ python lang_templates.py EXPORT originalTag endTag
+$ python lang_templates.py EXPORT originalTag endTag deadlineDate
 
-e.g. python lang_templates.py EXPORT 1.00.17 1.01.00
+e.g. python lang_templates.py EXPORT 1.00.17 1.01.00 1/Feb/2015
 
-where originalTag and endTag are e.g. git branches, tags, commits
+where originalTag and endTag are e.g. git branches, tags, commits and deadlineDate must not have any spaces in it
 
 which creates one .xls template file per language, each containing one row for each changed string
 
@@ -24,7 +24,7 @@ The developer identifies the start and end commits across which changes were mad
 He then runs the EXPORT command, which
 0) Extracts LanguageData.properties from Git for the two commits, and works out which keys are new and for which
 keys the english has changed
-1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for each new language key and for
+1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for each new message and for
  messages where the english has changed.
 2) Updates the other language properties files for the new/changed lines to have the new english translation. This
  is done so that a version can be released before the completed template files have been processed.
@@ -40,8 +40,6 @@ to the zh_TW and zh_SG versions.
 
 ########## Configuration ############
 # location of celtechcore git repo
-from reportlab.pdfbase.cidfonts import precalculate
-
 CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH = "/tmp/templates"
