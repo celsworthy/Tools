@@ -235,7 +235,7 @@ def make_template_file_from_delta_rows(deltaRows, pathTemplateXLS, languageCode,
         sheet.write(row_ix, 1, convert_to_windows_line_endings(row.full_string), style)
         ############################################################
         # Only required for first iteration with Jacqui - normally translation should go out blank
-        sheet.write(row_ix, 2, convert_to_windows_line_endings(row.translation), allowEditStyle)
+        #sheet.write(row_ix, 2, convert_to_windows_line_endings(row.translation), allowEditStyle)
         ############################################################
         numLines = 1 + row.full_string.count(r"\n") + len(row.full_string) / 60
         if numLines > 1:
