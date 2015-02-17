@@ -40,6 +40,8 @@ to the zh_TW and zh_SG versions.
 
 ########## Configuration ############
 # location of celtechcore git repo
+from pyatspi.text import TEXT_BOUNDARY_TYPE
+
 CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH = "/tmp/templates"
@@ -47,11 +49,13 @@ TEMPLATES_PATH = "/tmp/templates"
 LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
-ALIASES = {"fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
+ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
            "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese"}
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
+
+LANG_CODES = ["ja", "cs"]
 
 import xlrd
 import xlwt
@@ -99,6 +103,19 @@ class Row(object):
             self.hash_ = sheet.cell_value(rowNum, 0).encode('utf-8')
         except Exception:
             self.is_valid = False
+
+    def from_jap_sheet(self, sheet, rowNum):
+        # one-off for jacqui
+        self.is_valid = True
+        try:
+            self.row_num = rowNum
+            self.key = sheet.cell_value(rowNum, 0).encode('utf-8')
+            self.full_string = sheet.cell_value(rowNum, 1).encode('utf-8')
+            self.translation = sheet.cell_value(rowNum, 2).encode('utf-8')
+            self.hash_ = get_hash_for_string(self.key)
+        except Exception:
+            self.is_valid = False
+
 
     def from_line(self, line):
         self.is_valid = True
@@ -235,7 +252,7 @@ def make_template_file_from_delta_rows(deltaRows, pathTemplateXLS, languageCode,
         sheet.write(row_ix, 1, convert_to_windows_line_endings(row.full_string), style)
         ############################################################
         # Only required for first iteration with Jacqui - normally translation should go out blank
-        #sheet.write(row_ix, 2, convert_to_windows_line_endings(row.translation), allowEditStyle)
+        sheet.write(row_ix, 2, convert_to_windows_line_endings(row.translation), allowEditStyle)
         ############################################################
         numLines = 1 + row.full_string.count(r"\n") + len(row.full_string) / 60
         if numLines > 1:
@@ -392,8 +409,42 @@ def import_template_files():
     copy_language_files()
 
 
+def import_japanese_xls(path_to_xls):
+    rowsByHash = {}
+    workbook = xlrd.open_workbook(path_to_xls)
+    sheet = workbook.sheet_by_index(0)
+
+    START_ROW_IX = 3
+    for rowNum in range(START_ROW_IX, sheet.nrows):
+        row = Row()
+        row.from_jap_sheet(sheet, rowNum)
+        if row.is_valid:
+            rowsByHash[row.hash_] = row
+    return rowsByHash
+
+
+def update_template_file_with_xls_data(translation_rows):
+    template_xls_path = os.path.join(TEMPLATES_PATH, "LanguageData_Japanese.xls")
+    template_xls_rows = get_rows_from_XLS(template_xls_path)
+    for template_row in template_xls_rows.values():
+        if template_row.hash_ in translation_rows:
+            translation_row = translation_rows[template_row.hash_]
+            template_row.translation = translation_row.translation
+    make_template_file_from_delta_rows(template_xls_rows.values(), "/tmp/templates/LanguageData_Japanese.xls", "ja", "1/Mar/2015")
+
+
+
+def update_ja_template_with_xls():
+    # import the xls file that jacqui gave me
+    rows = import_japanese_xls("/home/tony/japanese.xls")
+    update_template_file_with_xls_data(rows)
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "EXPORT":
         make_template_files(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "IMPORT":
         import_template_files()
+    elif sys.argv[1] == "JAP_IMPORT":
+        # one-off job for Jacqui to update Japanese template file with contents of google apps spreadsheet
+        update_ja_template_with_xls()
