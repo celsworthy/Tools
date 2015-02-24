@@ -38,7 +38,6 @@ copy any language properties files as required, for instance the LanguageData_zh
 to the zh_TW and zh_SG versions.
 """
 
-########## Configuration ############
 # location of celtechcore git repo
 from pyatspi.text import TEXT_BOUNDARY_TYPE
 
@@ -55,7 +54,7 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 
-LANG_CODES = ["ja", "cs"]
+LANG_CODES = ["fr"]
 
 import xlrd
 import xlwt
@@ -116,6 +115,17 @@ class Row(object):
         except Exception:
             self.is_valid = False
 
+    def from_fre_sheet(self, sheet, rowNum):
+        # one-off for jacqui
+        self.is_valid = True
+        try:
+            self.row_num = rowNum
+            self.key = None
+            self.full_string = sheet.cell_value(rowNum, 0).encode('utf-8')
+            self.translation = sheet.cell_value(rowNum, 1).encode('utf-8')
+            self.hash_ = get_hash_for_string(self.full_string)
+        except Exception:
+            self.is_valid = False
 
     def from_line(self, line):
         self.is_valid = True
@@ -335,7 +345,7 @@ def make_template_files(tagOriginal, tagNew, deadlineDate):
         else:
             # this should only be run on the initial iteration with Jacqui as usually the translation
             # should be left blank in the XLS
-            update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
+            #update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
             ########################################
 
             make_template_file_from_delta_rows(delta_rows_by_hash.values(), pathTemplateXLS, lang_code, deadlineDate)
@@ -423,6 +433,20 @@ def import_japanese_xls(path_to_xls):
     return rowsByHash
 
 
+def import_french_xls(path_to_xls):
+    rowsByHash = {}
+    workbook = xlrd.open_workbook(path_to_xls)
+    sheet = workbook.sheet_by_index(0)
+
+    START_ROW_IX = 3
+    for rowNum in range(START_ROW_IX, sheet.nrows):
+        row = Row()
+        row.from_fre_sheet(sheet, rowNum)
+        if row.is_valid:
+            rowsByHash[row.hash_] = row
+    return rowsByHash
+
+
 def update_template_file_with_xls_data(translation_rows):
     template_xls_path = os.path.join(TEMPLATES_PATH, "LanguageData_Japanese.xls")
     template_xls_rows = get_rows_from_XLS(template_xls_path)
@@ -430,14 +454,30 @@ def update_template_file_with_xls_data(translation_rows):
         if template_row.hash_ in translation_rows:
             translation_row = translation_rows[template_row.hash_]
             template_row.translation = translation_row.translation
-    make_template_file_from_delta_rows(template_xls_rows.values(), "/tmp/templates/LanguageData_Japanese.xls", "ja", "1/Mar/2015")
+    make_template_file_from_delta_rows(template_xls_rows.values(), "/tmp/templates/LanguageData_Japanese.xls", "ja", "7/Mar/2015")
 
+
+def update_template_file_with_xls_data_fr(translation_rows):
+    template_xls_path = os.path.join(TEMPLATES_PATH, "LanguageData_French.xls")
+    template_xls_rows = get_rows_from_XLS(template_xls_path)
+    for template_row in template_xls_rows.values():
+        template_hash = get_hash_for_string(template_row.full_string)
+        if template_hash  in translation_rows:
+            translation_row = translation_rows[template_hash]
+            template_row.translation = translation_row.translation
+    make_template_file_from_delta_rows(template_xls_rows.values(), "/tmp/templates/LanguageData_French.xls", "fr", "7/Mar/2015")
 
 
 def update_ja_template_with_xls():
     # import the xls file that jacqui gave me
     rows = import_japanese_xls("/home/tony/japanese.xls")
     update_template_file_with_xls_data(rows)
+
+
+def update_fr_template_with_xls():
+    # import the xls file that jacqui gave me
+    rows = import_french_xls("/home/tony/french.xls")
+    update_template_file_with_xls_data_fr(rows)
 
 
 if __name__ == "__main__":
@@ -448,3 +488,6 @@ if __name__ == "__main__":
     elif sys.argv[1] == "JAP_IMPORT":
         # one-off job for Jacqui to update Japanese template file with contents of google apps spreadsheet
         update_ja_template_with_xls()
+    elif sys.argv[1] == "FRA_IMPORT":
+        # one-off job for Jacqui to update French template file with contents of google apps spreadsheet that does not have column A
+        update_fr_template_with_xls()
