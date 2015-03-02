@@ -39,22 +39,20 @@ to the zh_TW and zh_SG versions.
 """
 
 # location of celtechcore git repo
-from pyatspi.text import TEXT_BOUNDARY_TYPE
-
 CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH = "/tmp/templates"
 # codes of languages to be exported / imported
-LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
 ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
-           "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese"}
+           "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese", "pl": "Polish"}
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 
-LANG_CODES = ["fr"]
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_HK"]
 
 import xlrd
 import xlwt
@@ -213,7 +211,10 @@ def convert_to_windows_line_endings(unixString):
 
 
 def convert_from_windows_line_endings(windowsString):
-    return windowsString.replace("\r\n", r"\n")
+    str = windowsString.replace("\r\n", r"\n")
+    str = str.replace("\n", r"\n")
+    str = str.replace("\r", r"\n")
+    return str
 
 
 def make_default_style():
@@ -388,7 +389,10 @@ def update_properties_file_from_template(propertiesPath, templateXLSPath):
     propertiesRows = get_rows_from_language_file(propertiesPath)
     templateXLSRows = get_rows_from_XLS(templateXLSPath)
     for hash_, row in templateXLSRows.iteritems():
-        propertiesRows[hash_].full_string = row.translation
+        if row.translation is None or len(row.translation) == 0:
+            print "WARNING: Empty translation row while processing " + templateXLSPath + " hash: " + hash_
+        else:
+            propertiesRows[hash_].full_string = row.translation
     write_properties_file(propertiesPath, propertiesRows.values())
 
 
