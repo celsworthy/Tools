@@ -16,6 +16,14 @@ $ python lang_templates.py IMPORT
 
 which, for each language code, updates the LanguageData_??.properties file in the repo with the changes in the .xls file
 
+$ python lang_templates.py CHECK
+
+which checks the translated properties files for missing entries and untranslated entries
+
+$ python lang_templates.py FIX
+
+which, for translated properties file, updates missing entries with the english text
+
 
 THE PROCESS IS:
 
@@ -484,11 +492,100 @@ def update_fr_template_with_xls():
     update_template_file_with_xls_data_fr(rows)
 
 
+def check_properties_files():
+    """
+    Check each foreign language file that  it
+    (1) Has no blank lines (Warning)
+    (2) The translation is not the same as the English (Warning)
+    (3) Has all the entries in the English file (Warning)
+    (4) Has no extra lines (Warning)
+    """
+    for lang_code in LANG_CODES:
+        print "======================"
+        print lang_code
+        print "======================"
+        translationPropertiesFile = get_properties_file_path(lang_code)
+        englishPropertiesFile = get_properties_file_path(None)
+        translationRows = get_rows_from_language_file(translationPropertiesFile)
+        englishRows = get_rows_from_language_file(englishPropertiesFile)
+
+        num_error_1 = 0
+        num_error_2 = 0
+        num_error_3 = 0
+        for row in translationRows.values():
+            if row.hash_ in englishRows:
+                englishRow = englishRows[row.hash_]
+            else:
+                print "ERROR: no row in English file to match translation row " + row.hash_
+                continue
+            if row.full_string is None or len(row.full_string) == 0:
+                # (1)
+                print "WARNING: no translation while processing " + ": " + englishRow.key
+                num_error_1 += 1
+            if row.full_string == englishRow.full_string and not englishRow.full_string.startswith("*T") and not englishRow.full_string.upper() == "OKs":
+                # (2)
+                print "WARNING: row has not been translated: " + englishRow.key + ": " + englishRow.full_string
+                num_error_2 += 1
+        for englishRowHash in englishRows:
+            if englishRowHash not in translationRows:
+                print "ERROR: no translation found for row: " + englishRows[englishRowHash].key
+                num_error_3 += 1
+        print "======================"
+        print lang_code
+        print "No translation: " + str(num_error_1)
+        print "Not translated: " + str(num_error_2)
+        print "No translation for: " + str(num_error_3)
+
+
+def fix_properties_files():
+    """
+    For each foreign language file, if it is missing an entry from the english file or the entry is empty,
+    then copy in the english text
+    """
+    for lang_code in LANG_CODES:
+        print "======================"
+        print lang_code
+        print "======================"
+        translationPropertiesFile = get_properties_file_path(lang_code)
+        englishPropertiesFile = get_properties_file_path(None)
+        translationRows = get_rows_from_language_file(translationPropertiesFile)
+        englishRows = get_rows_from_language_file(englishPropertiesFile)
+
+        num_fixes_1 = 0
+        num_fixes_2 = 0
+        for row in translationRows.values():
+            if row.hash_ in englishRows:
+                englishRow = englishRows[row.hash_]
+            else:
+                print "ERROR: no row in English file to match translation row " + row.hash_
+                continue
+            if row.full_string is None or len(row.full_string) == 0:
+                print "FIXING for key: " + englishRow.key
+                row.full_string = englishRow.full_string
+                num_fixes_1 += 1
+
+        for englishRowHash in englishRows:
+            if englishRowHash not in translationRows:
+                print "ERROR: no translation found for row: " + englishRows[englishRowHash].key
+                translationRows[englishRowHash] = row
+                num_fixes_2 += 1
+        print "======================"
+        print lang_code
+        print "Empty translation: " + str(num_fixes_1)
+        print "New keys: " + str(num_fixes_2)
+        write_properties_file(translationPropertiesFile, translationRows.values())
+
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "EXPORT":
         make_template_files(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "IMPORT":
         import_template_files()
+    elif sys.argv[1] == "CHECK":
+        check_properties_files()
+    elif sys.argv[1] == "FIX":
+        fix_properties_files()
     elif sys.argv[1] == "JAP_IMPORT":
         # one-off job for Jacqui to update Japanese template file with contents of google apps spreadsheet
         update_ja_template_with_xls()
