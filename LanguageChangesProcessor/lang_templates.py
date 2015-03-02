@@ -24,6 +24,10 @@ $ python lang_templates.py FIX
 
 which, for translated properties file, updates missing entries with the english text
 
+$ python lang_templates.py COPY
+
+copies the language files as per COPIES variable
+
 
 THE PROCESS IS:
 
@@ -44,6 +48,8 @@ After the XLS templates have been updated with the correct translations, the dev
 which updates the appropriate language properties files with the new translations in the XLS files. It will also
 copy any language properties files as required, for instance the LanguageData_zh_HK.properties file will be copied
 to the zh_TW and zh_SG versions.
+
+Finally, after an IMPORT it is recommended to run a CHECK and then a FIX and a COPY.
 """
 
 # location of celtechcore git repo
@@ -51,7 +57,7 @@ CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH = "/tmp/templates"
 # codes of languages to be exported / imported
-LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
+LANG_CODES = ["en", "ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
 ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
@@ -61,6 +67,7 @@ COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 
 LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_HK"]
+
 
 import xlrd
 import xlwt
@@ -144,11 +151,34 @@ class Row(object):
             self.is_valid = False
 
     def write_to_properties_file(self, propertiesFile):
-        line = "%s=%s%s" % (self.key, convert_from_windows_line_endings(self.full_string), os.linesep)
+        full_string = convert_from_windows_line_endings(self.full_string)
+        full_string = convert_unicode(full_string)
+        line = "%s=%s%s" % (self.key, full_string, os.linesep)
         propertiesFile.write(line)
 
     def __repr__(self):
         return "<Row %s K:%s H:%s E:%s T:%s>" % (self.row_num, self.key, self.hash_, self.full_string, self.translation)
+
+
+def convert_unicode(string):
+    """
+    Convert any \uxxxx to the correct unicode character
+    """
+    string = unicode(string, 'utf-8')
+    import re
+    converted = True
+    while converted:
+        regex = re.compile(r"\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]")
+        search = regex.search(string)
+        if search != None:
+            unicode_char_repr = string[search.start() + 2:search.end()]
+            unicode_char = unichr(int(unicode_char_repr, 16))
+
+            print "replace " + string[search.start():search.end()] + " with " + unicode_char
+            string = string.replace(string[search.start():search.end()], unicode_char)
+        else:
+            converted = False
+    return string.encode('utf-8')
 
 
 def get_git_repository_files(tagOriginal, tagNew, filePath):
@@ -540,7 +570,8 @@ def check_properties_files():
 def fix_properties_files():
     """
     For each foreign language file, if it is missing an entry from the english file or the entry is empty,
-    then copy in the english text
+    then copy in the english text.
+    Also, update any unicode characters from \uxxxx to the actual unicode char
     """
     for lang_code in LANG_CODES:
         print "======================"
@@ -559,7 +590,7 @@ def fix_properties_files():
             else:
                 print "ERROR: no row in English file to match translation row " + row.hash_
                 continue
-            if row.full_string is None or len(row.full_string) == 0:
+            if (row.full_string is None or len(row.full_string) == 0) and not (englishRow.full_string is None or len(englishRow.full_string) == 0):
                 print "FIXING for key: " + englishRow.key
                 row.full_string = englishRow.full_string
                 num_fixes_1 += 1
@@ -567,7 +598,7 @@ def fix_properties_files():
         for englishRowHash in englishRows:
             if englishRowHash not in translationRows:
                 print "ERROR: no translation found for row: " + englishRows[englishRowHash].key
-                translationRows[englishRowHash] = row
+                translationRows[englishRowHash] = englishRows[englishRowHash]
                 num_fixes_2 += 1
         print "======================"
         print lang_code
@@ -586,6 +617,8 @@ if __name__ == "__main__":
         check_properties_files()
     elif sys.argv[1] == "FIX":
         fix_properties_files()
+    elif sys.argv[1] == "COPY":
+        copy_language_files()
     elif sys.argv[1] == "JAP_IMPORT":
         # one-off job for Jacqui to update Japanese template file with contents of google apps spreadsheet
         update_ja_template_with_xls()
