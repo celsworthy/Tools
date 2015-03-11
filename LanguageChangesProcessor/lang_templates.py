@@ -66,8 +66,7 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 
-LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_HK"]
-
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr"]
 
 import xlrd
 import xlwt
@@ -245,6 +244,8 @@ def convert_to_windows_line_endings(unixString):
     """
     Convert r"\n" to CRLF
     """
+    if (unixString is None):
+        return ""
     return unixString.replace(r"\n", "\r\n")
 
 
@@ -429,6 +430,8 @@ def update_properties_file_from_template(propertiesPath, templateXLSPath):
     for hash_, row in templateXLSRows.iteritems():
         if row.translation is None or len(row.translation) == 0:
             print "WARNING: Empty translation row while processing " + templateXLSPath + " hash: " + hash_
+        elif hash_ not in propertiesRows:
+            print "WARNING: Entry no longer exists in main properties file: " + row.full_string
         else:
             propertiesRows[hash_].full_string = row.translation
     write_properties_file(propertiesPath, propertiesRows.values())
@@ -607,6 +610,26 @@ def fix_properties_files():
         write_properties_file(translationPropertiesFile, translationRows.values())
 
 
+def make_check_templates():
+    """
+    For each entry in LanguageData.properties and each language, create a template xls that contains
+    the hash, English, and translation. This is so that the translators can check all translations.
+    """
+    for lang_code in LANG_CODES:
+        print "======================"
+        print lang_code
+        print "======================"
+        translationPropertiesFile = get_properties_file_path(lang_code)
+        englishPropertiesFile = get_properties_file_path(None)
+        translationRows = get_rows_from_language_file(translationPropertiesFile)
+        englishRows = get_rows_from_language_file(englishPropertiesFile)
+        for englishRow in englishRows.values():
+            if englishRow.hash_ in translationRows:
+                englishRow.translation = translationRows[englishRow.hash_].full_string
+
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[lang_code] + ".xls")
+        make_template_file_from_delta_rows(englishRows.values(), pathTemplateXLS, lang_code, "15/Mar/2015")
+
 
 if __name__ == "__main__":
     if sys.argv[1] == "EXPORT":
@@ -619,6 +642,8 @@ if __name__ == "__main__":
         fix_properties_files()
     elif sys.argv[1] == "COPY":
         copy_language_files()
+    elif sys.argv[1] == "MAKE_CHECK_TEMPLATES":
+        make_check_templates()
     elif sys.argv[1] == "JAP_IMPORT":
         # one-off job for Jacqui to update Japanese template file with contents of google apps spreadsheet
         update_ja_template_with_xls()
