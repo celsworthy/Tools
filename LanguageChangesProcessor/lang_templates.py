@@ -28,6 +28,11 @@ $ python lang_templates.py COPY
 
 copies the language files as per COPIES variable
 
+$ python lang_templates.py MAKE_CHECK_TEMPLATES
+
+creates a set of xls templates based on the data in the properties files so that they can be checked
+by the translators
+
 
 THE PROCESS IS:
 
@@ -66,7 +71,7 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 
-LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr"]
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
 
 import xlrd
 import xlwt
