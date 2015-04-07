@@ -16,6 +16,23 @@ $ python lang_templates.py IMPORT
 
 which, for each language code, updates the LanguageData_??.properties file in the repo with the changes in the .xls file
 
+$ python lang_templates.py CHECK
+
+which checks the translated properties files for missing entries and untranslated entries
+
+$ python lang_templates.py FIX
+
+which, for translated properties file, updates missing entries with the english text
+
+$ python lang_templates.py COPY
+
+copies the language files as per COPIES variable
+
+$ python lang_templates.py MAKE_CHECK_TEMPLATES
+
+creates a set of xls templates based on the data in the properties files so that they can be checked
+by the translators
+
 
 THE PROCESS IS:
 
@@ -36,22 +53,25 @@ After the XLS templates have been updated with the correct translations, the dev
 which updates the appropriate language properties files with the new translations in the XLS files. It will also
 copy any language properties files as required, for instance the LanguageData_zh_HK.properties file will be copied
 to the zh_TW and zh_SG versions.
+
+Finally, after an IMPORT it is recommended to run a CHECK and then a FIX and a COPY.
 """
 
-########## Configuration ############
 # location of celtechcore git repo
 CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
 TEMPLATES_PATH = "/tmp/templates"
 # codes of languages to be exported / imported
-LANG_CODES = ["de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
+LANG_CODES = ["en", "ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
 
 # when sending out files to translators, the alias should be used in place of the lang code
-ALIASES = {"fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
-           "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese"}
+ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
+           "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese", "pl": "Polish"}
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
+
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
 
 import xlrd
 import xlwt
@@ -100,6 +120,30 @@ class Row(object):
         except Exception:
             self.is_valid = False
 
+    def from_jap_sheet(self, sheet, rowNum):
+        # one-off for jacqui
+        self.is_valid = True
+        try:
+            self.row_num = rowNum
+            self.key = sheet.cell_value(rowNum, 0).encode('utf-8')
+            self.full_string = sheet.cell_value(rowNum, 1).encode('utf-8')
+            self.translation = sheet.cell_value(rowNum, 2).encode('utf-8')
+            self.hash_ = get_hash_for_string(self.key)
+        except Exception:
+            self.is_valid = False
+
+    def from_fre_sheet(self, sheet, rowNum):
+        # one-off for jacqui
+        self.is_valid = True
+        try:
+            self.row_num = rowNum
+            self.key = None
+            self.full_string = sheet.cell_value(rowNum, 0).encode('utf-8')
+            self.translation = sheet.cell_value(rowNum, 1).encode('utf-8')
+            self.hash_ = get_hash_for_string(self.full_string)
+        except Exception:
+            self.is_valid = False
+
     def from_line(self, line):
         self.is_valid = True
         try:
@@ -111,11 +155,34 @@ class Row(object):
             self.is_valid = False
 
     def write_to_properties_file(self, propertiesFile):
-        line = "%s=%s%s" % (self.key, convert_from_windows_line_endings(self.full_string), os.linesep)
+        full_string = convert_from_windows_line_endings(self.full_string)
+        full_string = convert_unicode(full_string)
+        line = "%s=%s%s" % (self.key, full_string, os.linesep)
         propertiesFile.write(line)
 
     def __repr__(self):
         return "<Row %s K:%s H:%s E:%s T:%s>" % (self.row_num, self.key, self.hash_, self.full_string, self.translation)
+
+
+def convert_unicode(string):
+    """
+    Convert any \uxxxx to the correct unicode character
+    """
+    string = unicode(string, 'utf-8')
+    import re
+    converted = True
+    while converted:
+        regex = re.compile(r"\\u[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]")
+        search = regex.search(string)
+        if search != None:
+            unicode_char_repr = string[search.start() + 2:search.end()]
+            unicode_char = unichr(int(unicode_char_repr, 16))
+
+            print "replace " + string[search.start():search.end()] + " with " + unicode_char
+            string = string.replace(string[search.start():search.end()], unicode_char)
+        else:
+            converted = False
+    return string.encode('utf-8')
 
 
 def get_git_repository_files(tagOriginal, tagNew, filePath):
@@ -182,11 +249,16 @@ def convert_to_windows_line_endings(unixString):
     """
     Convert r"\n" to CRLF
     """
+    if (unixString is None):
+        return ""
     return unixString.replace(r"\n", "\r\n")
 
 
 def convert_from_windows_line_endings(windowsString):
-    return windowsString.replace("\r\n", r"\n")
+    str = windowsString.replace("\r\n", r"\n")
+    str = str.replace("\n", r"\n")
+    str = str.replace("\r", r"\n")
+    return str
 
 
 def make_default_style():
@@ -318,7 +390,7 @@ def make_template_files(tagOriginal, tagNew, deadlineDate):
         else:
             # this should only be run on the initial iteration with Jacqui as usually the translation
             # should be left blank in the XLS
-            update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
+            #update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
             ########################################
 
             make_template_file_from_delta_rows(delta_rows_by_hash.values(), pathTemplateXLS, lang_code, deadlineDate)
@@ -361,7 +433,12 @@ def update_properties_file_from_template(propertiesPath, templateXLSPath):
     propertiesRows = get_rows_from_language_file(propertiesPath)
     templateXLSRows = get_rows_from_XLS(templateXLSPath)
     for hash_, row in templateXLSRows.iteritems():
-        propertiesRows[hash_].full_string = row.translation
+        if row.translation is None or len(row.translation) == 0:
+            print "WARNING: Empty translation row while processing " + templateXLSPath + " hash: " + hash_
+        elif hash_ not in propertiesRows:
+            print "WARNING: Entry no longer exists in main properties file: " + row.full_string
+        else:
+            propertiesRows[hash_].full_string = row.translation
     write_properties_file(propertiesPath, propertiesRows.values())
 
 
@@ -392,8 +469,189 @@ def import_template_files():
     copy_language_files()
 
 
+def import_japanese_xls(path_to_xls):
+    rowsByHash = {}
+    workbook = xlrd.open_workbook(path_to_xls)
+    sheet = workbook.sheet_by_index(0)
+
+    START_ROW_IX = 3
+    for rowNum in range(START_ROW_IX, sheet.nrows):
+        row = Row()
+        row.from_jap_sheet(sheet, rowNum)
+        if row.is_valid:
+            rowsByHash[row.hash_] = row
+    return rowsByHash
+
+
+def import_french_xls(path_to_xls):
+    rowsByHash = {}
+    workbook = xlrd.open_workbook(path_to_xls)
+    sheet = workbook.sheet_by_index(0)
+
+    START_ROW_IX = 3
+    for rowNum in range(START_ROW_IX, sheet.nrows):
+        row = Row()
+        row.from_fre_sheet(sheet, rowNum)
+        if row.is_valid:
+            rowsByHash[row.hash_] = row
+    return rowsByHash
+
+
+def update_template_file_with_xls_data(translation_rows):
+    template_xls_path = os.path.join(TEMPLATES_PATH, "LanguageData_Japanese.xls")
+    template_xls_rows = get_rows_from_XLS(template_xls_path)
+    for template_row in template_xls_rows.values():
+        if template_row.hash_ in translation_rows:
+            translation_row = translation_rows[template_row.hash_]
+            template_row.translation = translation_row.translation
+    make_template_file_from_delta_rows(template_xls_rows.values(), "/tmp/templates/LanguageData_Japanese.xls", "ja", "7/Mar/2015")
+
+
+def update_template_file_with_xls_data_fr(translation_rows):
+    template_xls_path = os.path.join(TEMPLATES_PATH, "LanguageData_French.xls")
+    template_xls_rows = get_rows_from_XLS(template_xls_path)
+    for template_row in template_xls_rows.values():
+        template_hash = get_hash_for_string(template_row.full_string)
+        if template_hash  in translation_rows:
+            translation_row = translation_rows[template_hash]
+            template_row.translation = translation_row.translation
+    make_template_file_from_delta_rows(template_xls_rows.values(), "/tmp/templates/LanguageData_French.xls", "fr", "7/Mar/2015")
+
+
+def update_ja_template_with_xls():
+    # import the xls file that jacqui gave me
+    rows = import_japanese_xls("/home/tony/japanese.xls")
+    update_template_file_with_xls_data(rows)
+
+
+def update_fr_template_with_xls():
+    # import the xls file that jacqui gave me
+    rows = import_french_xls("/home/tony/french.xls")
+    update_template_file_with_xls_data_fr(rows)
+
+
+def check_properties_files():
+    """
+    Check each foreign language file that  it
+    (1) Has no blank lines (Warning)
+    (2) The translation is not the same as the English (Warning)
+    (3) Has all the entries in the English file (Warning)
+    (4) Has no extra lines (Warning)
+    """
+    for lang_code in LANG_CODES:
+        print "======================"
+        print lang_code
+        print "======================"
+        translationPropertiesFile = get_properties_file_path(lang_code)
+        englishPropertiesFile = get_properties_file_path(None)
+        translationRows = get_rows_from_language_file(translationPropertiesFile)
+        englishRows = get_rows_from_language_file(englishPropertiesFile)
+
+        num_error_1 = 0
+        num_error_2 = 0
+        num_error_3 = 0
+        for row in translationRows.values():
+            if row.hash_ in englishRows:
+                englishRow = englishRows[row.hash_]
+            else:
+                print "ERROR: no row in English file to match translation row " + row.hash_
+                continue
+            if row.full_string is None or len(row.full_string) == 0:
+                # (1)
+                print "WARNING: no translation while processing " + ": " + englishRow.key
+                num_error_1 += 1
+            if row.full_string == englishRow.full_string and not englishRow.full_string.startswith("*T") and not englishRow.full_string.upper() == "OKs":
+                # (2)
+                print "WARNING: row has not been translated: " + englishRow.key + ": " + englishRow.full_string
+                num_error_2 += 1
+        for englishRowHash in englishRows:
+            if englishRowHash not in translationRows:
+                print "ERROR: no translation found for row: " + englishRows[englishRowHash].key
+                num_error_3 += 1
+        print "======================"
+        print lang_code
+        print "No translation: " + str(num_error_1)
+        print "Not translated: " + str(num_error_2)
+        print "No translation for: " + str(num_error_3)
+
+
+def fix_properties_files():
+    """
+    For each foreign language file, if it is missing an entry from the english file or the entry is empty,
+    then copy in the english text.
+    Also, update any unicode characters from \uxxxx to the actual unicode char
+    """
+    for lang_code in LANG_CODES:
+        print "======================"
+        print lang_code
+        print "======================"
+        translationPropertiesFile = get_properties_file_path(lang_code)
+        englishPropertiesFile = get_properties_file_path(None)
+        translationRows = get_rows_from_language_file(translationPropertiesFile)
+        englishRows = get_rows_from_language_file(englishPropertiesFile)
+
+        num_fixes_1 = 0
+        num_fixes_2 = 0
+        for row in translationRows.values():
+            if row.hash_ in englishRows:
+                englishRow = englishRows[row.hash_]
+            else:
+                print "ERROR: no row in English file to match translation row " + row.hash_
+                continue
+            if (row.full_string is None or len(row.full_string) == 0) and not (englishRow.full_string is None or len(englishRow.full_string) == 0):
+                print "FIXING for key: " + englishRow.key
+                row.full_string = englishRow.full_string
+                num_fixes_1 += 1
+
+        for englishRowHash in englishRows:
+            if englishRowHash not in translationRows:
+                print "ERROR: no translation found for row: " + englishRows[englishRowHash].key
+                translationRows[englishRowHash] = englishRows[englishRowHash]
+                num_fixes_2 += 1
+        print "======================"
+        print lang_code
+        print "Empty translation: " + str(num_fixes_1)
+        print "New keys: " + str(num_fixes_2)
+        write_properties_file(translationPropertiesFile, translationRows.values())
+
+
+def make_check_templates():
+    """
+    For each entry in LanguageData.properties and each language, create a template xls that contains
+    the hash, English, and translation. This is so that the translators can check all translations.
+    """
+    for lang_code in LANG_CODES:
+        print "======================"
+        print lang_code
+        print "======================"
+        translationPropertiesFile = get_properties_file_path(lang_code)
+        englishPropertiesFile = get_properties_file_path(None)
+        translationRows = get_rows_from_language_file(translationPropertiesFile)
+        englishRows = get_rows_from_language_file(englishPropertiesFile)
+        for englishRow in englishRows.values():
+            if englishRow.hash_ in translationRows:
+                englishRow.translation = translationRows[englishRow.hash_].full_string
+
+        pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[lang_code] + ".xls")
+        make_template_file_from_delta_rows(englishRows.values(), pathTemplateXLS, lang_code, "15/Mar/2015")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "EXPORT":
         make_template_files(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "IMPORT":
         import_template_files()
+    elif sys.argv[1] == "CHECK":
+        check_properties_files()
+    elif sys.argv[1] == "FIX":
+        fix_properties_files()
+    elif sys.argv[1] == "COPY":
+        copy_language_files()
+    elif sys.argv[1] == "MAKE_CHECK_TEMPLATES":
+        make_check_templates()
+    elif sys.argv[1] == "JAP_IMPORT":
+        # one-off job for Jacqui to update Japanese template file with contents of google apps spreadsheet
+        update_ja_template_with_xls()
+    elif sys.argv[1] == "FRA_IMPORT":
+        # one-off job for Jacqui to update French template file with contents of google apps spreadsheet that does not have column A
+        update_fr_template_with_xls()
