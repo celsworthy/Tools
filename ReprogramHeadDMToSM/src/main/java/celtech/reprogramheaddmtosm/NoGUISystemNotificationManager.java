@@ -205,9 +205,4 @@ public class NoGUISystemNotificationManager implements SystemNotificationManager
     {
         return true;
     }
-
-    @Override
-    public void showWelcomeScreen()
-    {
-    }
 }
