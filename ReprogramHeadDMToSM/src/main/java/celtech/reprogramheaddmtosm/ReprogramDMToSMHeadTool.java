@@ -33,7 +33,7 @@ public class ReprogramDMToSMHeadTool
 
         String installDir = ApplicationConfiguration.getApplicationInstallDirectory(
             ReprogramDMToSMHeadTool.class);
-        Lookup.setupDefaultValues();
+        Lookup.initialise();
 
         Lookup.setTaskExecutor(new celtech.dmtosmheadtool.NoGUITaskExecutor());
         Lookup.setSystemNotificationHandler(new NoGUISystemNotificationManager());

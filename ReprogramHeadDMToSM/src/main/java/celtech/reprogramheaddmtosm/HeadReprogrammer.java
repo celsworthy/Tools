@@ -97,15 +97,4 @@ public class HeadReprogrammer implements PrinterListChangesListener
 
         return succeeded;
     }
-
-    @Override
-    public void whenExtruderAdded(Printer printer, int extruderIndex)
-    {
-    }
-
-    @Override
-    public void whenExtruderRemoved(Printer printer, int extruderIndex)
-    {
-    }
-
 }
