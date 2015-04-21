@@ -42,8 +42,11 @@ public class LanguageFileProcessor
         Map<Integer, String> locales = new HashMap<>();
         Map<Integer, Map<String, String>> templateValues = new HashMap<>();
 
-        if (args.length > 0)
+        if (args.length == 3)
         {
+            String separator = args[1];
+            String extension = args[2];
+            
             File sourceFile = new File(args[0]);
 
             String sourcePath = FilenameUtils.getFullPath(sourceFile.getAbsolutePath());
@@ -78,12 +81,12 @@ public class LanguageFileProcessor
                                         if (currentLocale.equalsIgnoreCase("default"))
                                         {
                                             localeFileName = sourcePath + File.separator + filename
-                                                + ".properties";
+                                                + "." + extension;
                                             defaultLanguageColumn = i;
                                         } else
                                         {
                                             localeFileName = sourcePath + File.separator + filename
-                                                + "_" + currentLocale + ".properties";
+                                                + separator + currentLocale + "." + extension;
                                         }
 
                                         localeFound = createFile(localeFileName, localeFiles, i,
