@@ -94,13 +94,17 @@ class Parser
         Element extraChildElement = null;
         Set<Attribute> attributes = null;
         boolean skip = false;
-        switch (originalElement.getName())
+        switch (originalElement.getName().toLowerCase())
         {
             case "svg":
-                newElementName = "Pane";
+                newElementName = "Group";
                 break;
             case "g":
-                newElementName = "Pane";
+                newElementName = "Group";
+                break;
+            case "circle":    
+                newElementName = "Circle";
+                attributes = processCircleAttributes(originalElement);
                 break;
             case "rect":
                 newElementName = "Rectangle";
@@ -238,6 +242,29 @@ class Parser
         }
         return attributes;
     }
+    
+    private Set<Attribute> processCircleAttributes(Element element)
+    {
+        Set<Attribute> attributes = new HashSet<>();
+        String fill = element.getAttributeValue("fill");
+        if (fill != null && !fill.equals(""))
+        {
+            attributes.add(new Attribute("fill", fill));
+        }
+        String cx = element.getAttributeValue("cx");
+        String cy = element.getAttributeValue("cy");
+        String r = element.getAttributeValue("r");
+        if (cy == null || cy.equals("")) {
+            cy = "0";
+        }
+        if (cx == null || cx.equals("")) {
+            cx = "0";
+        }        
+        attributes.add(new Attribute("centerX", cx));
+        attributes.add(new Attribute("centerY", cy));
+        attributes.add(new Attribute("radius", r));
+        return attributes;
+    }    
 
     private Set<Attribute> processRectangleAttributes(Element element)
     {
@@ -252,7 +279,13 @@ class Parser
             x = "0";
         }        
         String height = element.getAttributeValue("height");
+        if (height == null || height.equals("")) {
+            height = "0";
+        }
         String width = element.getAttributeValue("width");
+        if (width == null || width.equals("")) {
+            width = "0";
+        }        
         attributes.add(new Attribute("x", x));
         attributes.add(new Attribute("y", y));
         attributes.add(new Attribute("height", height));
