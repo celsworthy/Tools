@@ -66,10 +66,9 @@ LANG_CODES = ["en", "ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", 
 ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv": "Swedish", "de": "German", "ko": "Korean", "ru": "Russian", "fi": "Finnish",
            "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese", "pl": "Polish"}
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
-COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
+COPIES = {"zh_HK" : ["zh_TW", "zh_SG"], "": ["en"]}
 #####################################
 LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
-LANG_CODES = ["de"]
 
 import xlrd
 import xlwt
@@ -470,6 +469,8 @@ def copy_language_files():
     Copy the language files as specified in COPIES
     """
     for copy_from_lang_code, copy_to_list in COPIES.iteritems():
+        if copy_from_lang_code == "":
+            copy_from_lang_code = None
         copy_from_properties_file = get_properties_file_path(copy_from_lang_code)
         for copy_to_lang_code in copy_to_list:
             copy_to_properties_file = get_properties_file_path(copy_to_lang_code)
