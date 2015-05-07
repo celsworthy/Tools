@@ -106,6 +106,10 @@ class Parser
                 newElementName = "Circle";
                 attributes = processCircleAttributes(originalElement);
                 break;
+            case "ellipse":    
+                newElementName = "Ellipse";
+                attributes = processEllipseAttributes(originalElement);
+                break;                
             case "rect":
                 newElementName = "Rectangle";
                 attributes = processRectangleAttributes(originalElement);
@@ -243,6 +247,31 @@ class Parser
         return attributes;
     }
     
+    private Set<Attribute> processEllipseAttributes(Element element)
+    {
+        Set<Attribute> attributes = new HashSet<>();
+        String fill = element.getAttributeValue("fill");
+        if (fill != null && !fill.equals(""))
+        {
+            attributes.add(new Attribute("fill", fill));
+        }
+        String cx = element.getAttributeValue("cx");
+        String cy = element.getAttributeValue("cy");
+        String rx = element.getAttributeValue("rx");
+        String ry = element.getAttributeValue("ry");
+        if (cy == null || cy.equals("")) {
+            cy = "0";
+        }
+        if (cx == null || cx.equals("")) {
+            cx = "0";
+        }        
+        attributes.add(new Attribute("centerX", cx));
+        attributes.add(new Attribute("centerY", cy));
+        attributes.add(new Attribute("radiusX", rx));
+        attributes.add(new Attribute("radiusY", ry));
+        return attributes;
+    }    
+    
     private Set<Attribute> processCircleAttributes(Element element)
     {
         Set<Attribute> attributes = new HashSet<>();
@@ -264,7 +293,7 @@ class Parser
         attributes.add(new Attribute("centerY", cy));
         attributes.add(new Attribute("radius", r));
         return attributes;
-    }    
+    }      
 
     private Set<Attribute> processRectangleAttributes(Element element)
     {
