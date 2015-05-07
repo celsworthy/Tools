@@ -20,7 +20,7 @@ $ python lang_templates.py CHECK
 
 which checks the translated properties files for missing entries and untranslated entries
 
-$ python lang_templates.py FIX
+$ python lang_templates.py FIX - DO NOT USE
 
 which, for translated properties file, updates missing entries with the english text
 
@@ -43,9 +43,7 @@ He then runs the EXPORT command, which
 keys the english has changed
 1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for each new message and for
  messages where the english has changed.
-2) Updates the other language properties files for the new/changed lines to have the new english translation. This
- is done so that a version can be released before the completed template files have been processed.
-3) If there is not currently any LanguageData_??.properties file for the requested language code, then one is
+2) If there is not currently any LanguageData_??.properties file for the requested language code, then one is
 created by copying from LanguageData.properties, and the template XLS file is created with all rows from
 LanguageData.properties and all translations blank.
 
@@ -60,7 +58,7 @@ Finally, after an IMPORT it is recommended to run a CHECK and then a FIX and a C
 # location of celtechcore git repo
 CELTECH_REPO_DIR = "/home/tony/NetBeansProjects/celtechcore"
 # directory were templates are to be exported to and imported from
-TEMPLATES_PATH = "/tmp/templates"
+TEMPLATES_PATH = "/home/tony/tmp/templates"
 # codes of languages to be exported / imported
 LANG_CODES = ["en", "ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
 
@@ -70,8 +68,8 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
-
-LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es"]
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
+LANG_CODES = ["de"]
 
 import xlrd
 import xlwt
@@ -149,6 +147,8 @@ class Row(object):
         try:
             self.row_num = None
             self.key, self.full_string = line.split('=')
+            if self.key.startswith("#"):
+                raise Exception("comment")
             self.translation = None
             self.hash_ = get_hash_for_string(self.key)
         except Exception:
@@ -374,6 +374,27 @@ def no_properties_file_for_lang_code(lang_code):
     return not os.path.exists(propertiesFilePath)
 
 
+def add_missing_entries_from_properties_file(lang_code, delta_rows_by_hash, path_to_second_revision):
+    """
+    For the given language, open the current .properties file and see which keys are missing
+    compared to the latest english .properties file. Add a row for each missing key.
+    """
+    # print "add missing rows for language " + lang_code
+    num_added = 0
+    path_to_language_file = get_properties_file_path(lang_code)
+    language_file_rows = get_rows_from_language_file(path_to_language_file)
+    english_file_rows = get_rows_from_language_file(path_to_second_revision)
+    for row_hash in english_file_rows:
+        if row_hash not in language_file_rows:
+            new_row = Row()
+            new_row.hash_ = row_hash
+            # print "add row for " + english_file_rows[row_hash].full_string
+            new_row.full_string = english_file_rows[row_hash].full_string
+            delta_rows_by_hash[row_hash] = new_row
+            num_added += 1
+    print str(num_added) + " added for " + lang_code
+
+
 def make_template_files(tagOriginal, tagNew, deadlineDate):
     path_to_first_revision, path_to_second_revision = get_git_repository_files(tagOriginal, tagNew,
                          os.path.join(RESOURCES_SUBDIR, "LanguageData.properties"))
@@ -390,11 +411,11 @@ def make_template_files(tagOriginal, tagNew, deadlineDate):
         else:
             # this should only be run on the initial iteration with Jacqui as usually the translation
             # should be left blank in the XLS
-            #update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
+            update_delta_rows_with_latest_translations(delta_rows_by_hash.values(), lang_code)
             ########################################
 
+            add_missing_entries_from_properties_file(lang_code, delta_rows_by_hash, path_to_second_revision)
             make_template_file_from_delta_rows(delta_rows_by_hash.values(), pathTemplateXLS, lang_code, deadlineDate)
-            fill_in_english_from_delta_rows(delta_rows_by_hash.values(), lang_code)
 
 
 def fill_in_english_from_delta_rows(deltaRows, lang_code):
@@ -423,22 +444,24 @@ def write_properties_file(path, rows):
     Overwrite the properties file with the data in the given rows
     """
     rows.sort(key=lambda x: x.key)
-    propertiesFile = open(path, "w+")
+    properties_file = open(path, "w+")
     for row in rows:
-        row.write_to_properties_file(propertiesFile)
-    propertiesFile.close()
+        row.write_to_properties_file(properties_file)
+    properties_file.close()
 
 
-def update_properties_file_from_template(propertiesPath, templateXLSPath):
+def update_properties_file_from_template(propertiesPath, templateXLSPath, current_english_rows):
     propertiesRows = get_rows_from_language_file(propertiesPath)
     templateXLSRows = get_rows_from_XLS(templateXLSPath)
     for hash_, row in templateXLSRows.iteritems():
         if row.translation is None or len(row.translation) == 0:
             print "WARNING: Empty translation row while processing " + templateXLSPath + " hash: " + hash_
-        elif hash_ not in propertiesRows:
-            print "WARNING: Entry no longer exists in main properties file: " + row.full_string
         else:
+            if hash_ not in propertiesRows:
+                propertiesRows[hash_] = Row()
+                propertiesRows[hash_].key = current_english_rows[hash_].key
             propertiesRows[hash_].full_string = row.translation
+
     write_properties_file(propertiesPath, propertiesRows.values())
 
 
@@ -462,10 +485,11 @@ def get_properties_file_path(lang_code):
 
 
 def import_template_files():
+    current_english_rows = get_rows_from_language_file(get_properties_file_path(None))
     for lang_code in LANG_CODES:
         pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[lang_code] + ".xls")
         pathPropertiesFile = get_properties_file_path(lang_code)
-        update_properties_file_from_template(pathPropertiesFile, pathTemplateXLS)
+        update_properties_file_from_template(pathPropertiesFile, pathTemplateXLS, current_english_rows)
     copy_language_files()
 
 
@@ -643,8 +667,8 @@ if __name__ == "__main__":
         import_template_files()
     elif sys.argv[1] == "CHECK":
         check_properties_files()
-    elif sys.argv[1] == "FIX":
-        fix_properties_files()
+    # elif sys.argv[1] == "FIX":
+    #     fix_properties_files()
     elif sys.argv[1] == "COPY":
         copy_language_files()
     elif sys.argv[1] == "MAKE_CHECK_TEMPLATES":
