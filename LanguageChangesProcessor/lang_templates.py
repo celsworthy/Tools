@@ -69,8 +69,6 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"], "": ["en"]}
 #####################################
 LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
-
-import xlrd
 import xlwt
 import hashlib
 import subprocess
@@ -196,6 +194,9 @@ def get_git_repository_files(tagOriginal, tagNew, filePath):
     os.close(hnd1)
     os.close(hnd2)
 
+    shutil.copy2(path1, TEMPLATES_PATH + os.sep + "G1")
+    shutil.copy2(path2, TEMPLATES_PATH + os.sep + "G2")
+
     return path1, path2
 
 
@@ -228,6 +229,7 @@ def get_language_files_delta(path_original, path_new):
     """
     Return one Row for each changed line in the language file, in a dict keyed by hash
     """
+    num = 0
     rows_original = get_rows_from_language_file(path_original)
     rows_new = get_rows_from_language_file(path_new)
     # new rows will have a hash that does not exist in the original
@@ -236,11 +238,21 @@ def get_language_files_delta(path_original, path_new):
     changed_hashes = new_hashes.difference(original_hashes)
     delta_rows = {}
     for hash_ in changed_hashes:
+        print "new key for " + rows_new[hash_].key
         delta_rows[hash_] = rows_new[hash_]
+        num += 1
     # add rows where full_string has changed for same key
+    num_changed_text = 0
     for hash_, row in rows_new.iteritems():
+
         if hash_ in rows_original and row.full_string != rows_original[hash_].full_string:
+            print "changed key for " + rows_new[hash_].key
+            print "old text: " + rows_original[hash_].full_string
+            print "new text: " + row.full_string
             delta_rows[hash_] = row
+            num_changed_text += 1
+    print str(num_changed_text) + " changed text "
+    print str(num) + " new rows "
     return delta_rows
 
 
@@ -397,9 +409,9 @@ def add_missing_entries_from_properties_file(lang_code, delta_rows_by_hash, path
 def make_template_files(tagOriginal, tagNew, deadlineDate):
     path_to_first_revision, path_to_second_revision = get_git_repository_files(tagOriginal, tagNew,
                          os.path.join(RESOURCES_SUBDIR, "LanguageData.properties"))
-    delta_rows_by_hash = get_language_files_delta(path_to_first_revision, path_to_second_revision)
 
     for lang_code in LANG_CODES:
+        delta_rows_by_hash = get_language_files_delta(path_to_first_revision, path_to_second_revision)
         pathTemplateXLS = os.path.join(TEMPLATES_PATH, "LanguageData_" + ALIASES[lang_code] + ".xls")
         if no_properties_file_for_lang_code(lang_code):
             make_new_language_properties_file(lang_code)
