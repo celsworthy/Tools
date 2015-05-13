@@ -66,8 +66,8 @@ class Parser
         String content = new String(Files.readAllBytes(Paths.get(destinationFile)));
 
         content = content.replaceAll("<\\?xml version=\"1.0\" encoding=\"UTF-8\"\\?>", "");
-        content = content.replaceFirst("Pane",
-                                       "Pane xmlns=\"http://javafx.com/javafx/8\" xmlns:fx=\"http://javafx.com/fxml/1\"");
+        content = content.replaceFirst("Group",
+                                       "Group xmlns=\"http://javafx.com/javafx/8\" xmlns:fx=\"http://javafx.com/fxml/1\"");
         content = content.replaceAll("FX", "fx:");
         content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + "\n"
             + "<?import javafx.scene.control.*?>\n" + "<?import javafx.scene.*?>\n"
