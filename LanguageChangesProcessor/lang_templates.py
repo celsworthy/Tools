@@ -69,8 +69,12 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"], "": ["en"]}
 #####################################
-#LANG_CODES = ["nl"]
+# LANG_CODES = ["nl"]
 LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
+
+RESTRICT_TO_KEYS=["versionWelcomeSubtitle1",   "versionWelcomeBody1",
+                  "versionWelcomeSubtitle2",   "versionWelcomeBody2",
+                  "versionWelcomeSubtitle3",   "versionWelcomeBody3",]
 
 import xlrd
 import xlwt
@@ -315,6 +319,9 @@ def make_template_file_from_delta_rows(deltaRows, pathTemplateXLS, languageCode,
     for col_ix, value in enumerate(headings):
         sheet.write(row_ix, col_ix, value, boldLargeFontStyle)
     for row in deltaRows:
+        if len(RESTRICT_TO_KEYS) > 0:
+            if not row.key in RESTRICT_TO_KEYS:
+                continue
         row_ix += 1
         style = make_default_style()
         allowEditStyle = make_edit_style()
@@ -403,6 +410,7 @@ def add_missing_entries_from_properties_file(lang_code, delta_rows_by_hash, path
         if row_hash not in language_file_rows:
             new_row = Row()
             new_row.hash_ = row_hash
+            new_row.key = english_file_rows[row_hash].key
             # print "add row for " + english_file_rows[row_hash].full_string
             new_row.full_string = english_file_rows[row_hash].full_string
             delta_rows_by_hash[row_hash] = new_row
