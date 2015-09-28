@@ -36,23 +36,27 @@ by the translators
 
 THE PROCESS IS:
 
-The developer identifies the start and end commits across which changes were made to the LanguageData.properties file.
+The developer identifies the start and end commits across which changes were made
+ to the LanguageData.properties file.
 
 He then runs the EXPORT command, which
-0) Extracts LanguageData.properties from Git for the two commits, and works out which keys are new and for which
-keys the english has changed
-1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for each new message and for
- messages where the english has changed.
-2) If there is not currently any LanguageData_??.properties file for the requested language code, then one is
-created by copying from LanguageData.properties, and the template XLS file is created with all rows from
+0) Extracts LanguageData.properties from Git for the two commits, and works out
+ which keys are new and for which keys the english has changed
+1) Creates one XLS file for each LANG_CODE. The XLS file will contain one line for
+each new message and for messages where the english has changed.
+2) If there is not currently any LanguageData_??.properties file for the
+requested language code, then one is created by copying from LanguageData.properties,
+and the template XLS file is created with all rows from
 LanguageData.properties and all translations blank.
 
-After the XLS templates have been updated with the correct translations, the developer then runs the IMPORT command,
-which updates the appropriate language properties files with the new translations in the XLS files. It will also
-copy any language properties files as required, for instance the LanguageData_zh_HK.properties file will be copied
+After the XLS templates have been updated with the correct translations,
+the developer then runs the IMPORT command,
+which updates the appropriate language properties files with the new
+translations in the XLS files. It will also
+copy any language properties files as required, for instance the
+LanguageData_zh_HK.properties file will be copied
 to the zh_TW and zh_SG versions.
 
-Finally, after an IMPORT it is recommended to run a CHECK and then a FIX and a COPY.
 """
 
 # location of celtechcore git repo
@@ -70,7 +74,7 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
 COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 # LANG_CODES = ["nl"]
-LANG_CODES = ["ja"]
+LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
 
 RESTRICT_TO_KEYS=[
 #    "versionWelcomeSubtitle1",   "versionWelcomeBody1",
