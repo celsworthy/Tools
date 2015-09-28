@@ -67,14 +67,16 @@ ALIASES = {"ja":"Japanese", "cs": "Czech", "fr": "French", "es": "Spanish", "sv"
            "zh_CN": "Simplified Chinese", "zh_HK": "Traditional Chinese", "pl": "Polish",
            "nl": "Netherlands"}
 # after updating language files, zh_HK properties file should be copied to zh_TW and zh_SG
-COPIES = {"zh_HK" : ["zh_TW", "zh_SG"], "": ["en"]}
+COPIES = {"zh_HK" : ["zh_TW", "zh_SG"]}
 #####################################
 # LANG_CODES = ["nl"]
-LANG_CODES = ["ja", "de", "fi", "ko", "ru", "sv", "zh_CN", "zh_HK", "fr", "es", "pl"]
+LANG_CODES = ["ja"]
 
-RESTRICT_TO_KEYS=["versionWelcomeSubtitle1",   "versionWelcomeBody1",
-                  "versionWelcomeSubtitle2",   "versionWelcomeBody2",
-                  "versionWelcomeSubtitle3",   "versionWelcomeBody3",]
+RESTRICT_TO_KEYS=[
+#    "versionWelcomeSubtitle1",   "versionWelcomeBody1",
+#    "versionWelcomeSubtitle2",   "versionWelcomeBody2",
+#    "versionWelcomeSubtitle3",   "versionWelcomeBody3",
+]
 
 import xlrd
 import xlwt
@@ -482,7 +484,10 @@ def update_properties_file_from_template(propertiesPath, templateXLSPath, curren
         else:
             if hash_ not in propertiesRows:
                 propertiesRows[hash_] = Row()
-                propertiesRows[hash_].key = current_english_rows[hash_].key
+                if hash_ in current_english_rows:
+                    propertiesRows[hash_].key = current_english_rows[hash_].key
+                else:
+                    print "Not found in English file: " + hash_
             propertiesRows[hash_].full_string = row.translation
 
     write_properties_file(propertiesPath, propertiesRows.values())
