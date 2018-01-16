@@ -122,6 +122,12 @@ class Parser
             case "text":
                 skip = true;
                 break;
+            case "defs":
+                skip = true;
+                break;
+            case "title":
+                skip = true;
+                break;
             case "line":
                 newElementName = "Line";
                 attributes = processLineAttributes(originalElement);
