@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import celuk.encryptprinterid.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane id="AnchorPane" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8.0.40" fx:controller="celuk.encryptprinterid.EncryptPIDUIController">
+    <children>
+        <VBox fx:id="permSetVBox" spacing="5.0" style="-fx-border-color: black; -fx-border-width: 3;">
+            <children>
+            <Label alignment="CENTER" style="-fx-font-size: 28;" styleClass="regularText" text="Generate Printer ID Reset Code" />
+            <HBox fx:id="printerIDHBox" alignment="CENTER" disable="false" spacing="5.0" VBox.vgrow="ALWAYS">
+                    <children>
+                        <Label fx:id="printerIDLabel" alignment="CENTER" style="-fx-font-size: 18;" styleClass="regularText" text="Printer ID:">
+                            <HBox.margin>
+                                <Insets right="5.0" />
+                            </HBox.margin>
+                        </Label>
+                        <RestrictedTextField fx:id="printerTypeCodeField" forceUpperCase="true" maxLength="8" prefWidth="60" restrict="0-9A-Z" />
+                        <Text text="-" />
+                        <RestrictedTextField fx:id="printerEditionField" forceUpperCase="true" maxLength="2" prefWidth="30" restrict="0-9A-Z" />
+                        <Text text="-" />
+                        <RestrictedTextField fx:id="printerWeekField" maxLength="2" prefWidth="30" restrict="0-9" />
+                        <RestrictedTextField fx:id="printerYearField" maxLength="2" prefWidth="30" restrict="0-9" />
+                        <Text text="-" />
+                        <RestrictedTextField fx:id="printerPONumberField" maxLength="7" prefWidth="65.0" restrict="[0-9]" />
+                        <Text text="-" />
+                        <RestrictedTextField fx:id="printerSerialNumberField"  maxLength="4" prefWidth="45.0" restrict="[0-9]" />
+                        <Text text="-" />
+                        <RestrictedTextField fx:id="printerChecksumField"  maxLength="1" prefWidth="25" restrict="[0-9]" />
+                    </children>
+                </HBox>
+                <HBox fx:id="printerIDCodeHBox" alignment="CENTER" disable="false" prefHeight="-1.0" prefWidth="-1.0" spacing="5.0">
+                    <children>
+                        <Label fx:id="printerResetCodeLabel" alignment="CENTER" style="-fx-font-size: 18;" styleClass="regularText" text="Reset Code:">
+                            <HBox.margin>
+                                <Insets />
+                            </HBox.margin>
+                        </Label>
+                        <TextField fx:id="printerIDCodeField" editable="false" prefWidth="-1" HBox.hgrow="ALWAYS">
+                            <HBox.margin>
+                                <Insets />
+                            </HBox.margin>
+                        </TextField>
+                    </children>
+                </HBox>
+            </children>
+            <padding>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+            </padding>
+            <VBox.margin>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+            </VBox.margin>
+        </VBox>
+    </children>
+</AnchorPane>
