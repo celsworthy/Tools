@@ -52,17 +52,36 @@ public class EncryptPIDUIController implements Initializable {
 
     @FXML
     private RestrictedTextField printerChecksumField;
+    
+    @FXML
+    private void clearFields()
+    {
+        printerTypeCodeField.clear();
+        printerEditionField.clear();
+        printerWeekField.clear();
+        printerYearField.clear();
+        printerPONumberField.clear();
+        printerSerialNumberField.clear();
+        printerChecksumField.clear();
+    }
 
     @Override
     public void initialize(URL url, ResourceBundle rb)
     {
         printerTypeCodeField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerEditionField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerWeekField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerYearField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerPONumberField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerSerialNumberField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerChecksumField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
+        printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
     }
 
     public static char generateUPSModulo10Checksum(String inputString) throws InvalidChecksumException
@@ -234,17 +253,52 @@ public class EncryptPIDUIController implements Initializable {
         boolean result = false;
         
         if (checkChar.length() == 1)
-        try
         {
-            result = (checkChar.charAt(0) == generateUPSModulo10Checksum(idToCheck));
-    
-        }
-        catch(InvalidChecksumException ex)
-        {
+            try
+            {
+                result = (checkChar.charAt(0) == generateUPSModulo10Checksum(idToCheck));
+
+            }
+            catch(InvalidChecksumException ex)
+            {
+            }
         }
         return result;
     }
             
+    private boolean pasteHandler(String content)
+    {  
+        String[] components = content.split("-");
+        if (components.length == 6)
+        {
+            String typeCode = components[0].trim().toUpperCase();
+            String edition = components[1].trim().toUpperCase();
+            String week = components[2].trim();
+            String year = "00";
+            if (week.length()> 2)
+            {
+                year = week.substring(2);
+                week = week.substring(0, 2);
+            }
+            String poNumber = components[3].trim();
+            String serialNumber = components[4].trim();
+            String checkByte = components[5].trim();
+
+            if (isValid(typeCode + edition + week + year + poNumber + serialNumber, checkByte))
+            {
+                printerTypeCodeField.setText(typeCode);
+                printerEditionField.setText(edition);
+                printerWeekField.setText(week);
+                printerYearField.setText(year);
+                printerPONumberField.setText(poNumber);
+                printerSerialNumberField.setText(serialNumber);
+                printerChecksumField.setText(checkByte);
+                return true;
+            }
+        }
+        return false;
+    }
+    
     public void encryptPrinterIdentity()
     {
         StringBuilder checkSB = new StringBuilder();

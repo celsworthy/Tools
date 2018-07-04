@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import celuk.encryptprinterid.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
@@ -9,7 +9,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 
-<AnchorPane id="AnchorPane" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8.0.40" fx:controller="celuk.encryptprinterid.EncryptPIDUIController">
+<AnchorPane id="AnchorPane" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="celuk.encryptprinterid.EncryptPIDUIController">
     <children>
         <VBox fx:id="permSetVBox" spacing="5.0" style="-fx-border-color: black; -fx-border-width: 3;">
             <children>
@@ -30,9 +30,13 @@
                         <Text text="-" />
                         <RestrictedTextField fx:id="printerPONumberField" maxLength="7" prefWidth="65.0" restrict="[0-9]" />
                         <Text text="-" />
-                        <RestrictedTextField fx:id="printerSerialNumberField"  maxLength="4" prefWidth="45.0" restrict="[0-9]" />
+                        <RestrictedTextField fx:id="printerSerialNumberField" maxLength="4" prefWidth="45.0" restrict="[0-9]" />
                         <Text text="-" />
-                        <RestrictedTextField fx:id="printerChecksumField"  maxLength="1" prefWidth="25" restrict="[0-9]" />
+                        <RestrictedTextField fx:id="printerChecksumField" maxLength="1" prefWidth="25" restrict="[0-9]" />
+                        <Button fx:id="clearFields" mnemonicParsing="false" onAction="#clearFields" text="Clear">
+                     <HBox.margin>
+                        <Insets left="5.0" />
+                     </HBox.margin></Button>
                     </children>
                 </HBox>
                 <HBox fx:id="printerIDCodeHBox" alignment="CENTER" disable="false" prefHeight="-1.0" prefWidth="-1.0" spacing="5.0">

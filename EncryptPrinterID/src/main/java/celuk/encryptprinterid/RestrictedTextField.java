@@ -9,6 +9,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Clipboard;
 
 /**
  *
@@ -24,6 +25,18 @@ public class RestrictedTextField extends TextField
 
     private final String standardAllowedCharacters = "\u0008\u007f";
 
+    private PasteHandler paster = null;
+    
+    /**
+     * Sets the max length of the text field.
+     *
+     * @param maxLength The max length.
+     */
+    public void setPasteHandler(PasteHandler paster)
+    {
+        this.paster = paster;
+    }
+    
     /**
      *
      * @return
@@ -115,6 +128,16 @@ public class RestrictedTextField extends TextField
     public RestrictedTextField()
     {
         this.getStyleClass().add(this.getClass().getSimpleName());
+    }
+    
+    @Override
+    public void paste()
+    {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        if (paster != null && clipboard.hasString() && paster.handlePaste(clipboard.getString()))
+            return;
+        
+        super.paste();
     }
 
     @Override
