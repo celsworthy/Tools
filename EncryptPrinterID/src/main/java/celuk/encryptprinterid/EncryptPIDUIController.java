@@ -14,6 +14,7 @@ import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javax.crypto.Cipher;
@@ -52,6 +53,9 @@ public class EncryptPIDUIController implements Initializable {
 
     @FXML
     private RestrictedTextField printerChecksumField;
+
+    @FXML
+    private ComboBox printerElectronicsVersion;
     
     @FXML
     private void clearFields()
@@ -63,6 +67,7 @@ public class EncryptPIDUIController implements Initializable {
         printerPONumberField.clear();
         printerSerialNumberField.clear();
         printerChecksumField.clear();
+        printerElectronicsVersion.setValue("-");
     }
 
     @Override
@@ -82,6 +87,13 @@ public class EncryptPIDUIController implements Initializable {
         printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
         printerChecksumField.textProperty().addListener((observable, oldValue, newValue) -> encryptPrinterIdentity());
         printerTypeCodeField.setPasteHandler(s -> pasteHandler(s));
+        printerElectronicsVersion.getItems().add("");
+        printerElectronicsVersion.getItems().add("1");
+        printerElectronicsVersion.getItems().add("2");
+        printerElectronicsVersion.setValue("");
+        printerElectronicsVersion.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            encryptPrinterIdentity();
+        });
     }
 
     public static char generateUPSModulo10Checksum(String inputString) throws InvalidChecksumException
@@ -283,8 +295,14 @@ public class EncryptPIDUIController implements Initializable {
             String poNumber = components[3].trim();
             String serialNumber = components[4].trim();
             String checkByte = components[5].trim();
+            String electronicsVersion = "";
+            if (checkByte.length() == 3 && (checkByte.charAt(1) == 'E' || checkByte.charAt(1) == 'e')) {
+                electronicsVersion = checkByte.substring(2, 3);
+                checkByte = checkByte.substring(0, 1);
+            }
 
-            if (isValid(typeCode + edition + week + year + poNumber + serialNumber, checkByte))
+            if (isValid(typeCode + edition + week + year + poNumber + serialNumber, checkByte) && 
+                (electronicsVersion.equals("") || electronicsVersion.equals("1") || electronicsVersion.equals("2")))
             {
                 printerTypeCodeField.setText(typeCode);
                 printerEditionField.setText(edition);
@@ -293,6 +311,7 @@ public class EncryptPIDUIController implements Initializable {
                 printerPONumberField.setText(poNumber);
                 printerSerialNumberField.setText(serialNumber);
                 printerChecksumField.setText(checkByte);
+                printerElectronicsVersion.setValue(electronicsVersion);
                 return true;
             }
         }
@@ -325,6 +344,10 @@ public class EncryptPIDUIController implements Initializable {
             plainSB.append(printerSerialNumberField.getText().trim().toUpperCase());
             plainSB.append("-");
             plainSB.append(printerChecksumField.getText().trim().toUpperCase());
+            if (!printerElectronicsVersion.getValue().equals("")) {
+                plainSB.append("E");
+                plainSB.append(printerElectronicsVersion.getValue());
+            }
 
             String encryptedPrinterID = encrypt(plainSB.toString(), KEY_TO_THE_CRYPT);
             printerIDCodeField.setText(encryptedPrinterID);

@@ -2,6 +2,7 @@
 <?import celuk.encryptprinterid.*?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
@@ -33,6 +34,8 @@
                         <RestrictedTextField fx:id="printerSerialNumberField" maxLength="4" prefWidth="45.0" restrict="[0-9]" />
                         <Text text="-" />
                         <RestrictedTextField fx:id="printerChecksumField" maxLength="1" prefWidth="25" restrict="[0-9]" />
+                        <Text text="E" />
+                        <ComboBox fx:id="printerElectronicsVersion" prefWidth="40.0" />
                         <Button fx:id="clearFields" mnemonicParsing="false" onAction="#clearFields" text="Clear">
                      <HBox.margin>
                         <Insets left="5.0" />
