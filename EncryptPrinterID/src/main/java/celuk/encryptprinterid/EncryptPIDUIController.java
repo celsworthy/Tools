@@ -10,17 +10,18 @@ import java.nio.charset.Charset;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.xml.bind.DatatypeConverter;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 
 /**
  *
@@ -96,7 +97,7 @@ public class EncryptPIDUIController implements Initializable {
         });
     }
 
-    public static char generateUPSModulo10Checksum(String inputString) throws InvalidChecksumException
+    public static char generateUPSModulo10Checksum(String inputString)
     {
         int sum = 0;
 
@@ -266,14 +267,7 @@ public class EncryptPIDUIController implements Initializable {
         
         if (checkChar.length() == 1)
         {
-            try
-            {
-                result = (checkChar.charAt(0) == generateUPSModulo10Checksum(idToCheck));
-
-            }
-            catch(InvalidChecksumException ex)
-            {
-            }
+            result = (checkChar.charAt(0) == generateUPSModulo10Checksum(idToCheck));
         }
         return result;
     }
@@ -359,14 +353,13 @@ public class EncryptPIDUIController implements Initializable {
             printerIDCodeField.clear();
     }
     
-    public static String encrypt(final String plainMessage,
+    private static String encrypt(final String plainMessage,
                                  final String symKeyHex)
     {
-        final byte[] symKeyData = DatatypeConverter.parseHexBinary(symKeyHex);
-
-        final byte[] encodedMessage = plainMessage.getBytes(Charset.forName("UTF-8"));
         try
         {
+            final byte[] symKeyData = Hex.decodeHex(symKeyHex.toCharArray());
+            final byte[] encodedMessage = plainMessage.getBytes(Charset.forName("UTF-8"));
             final Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             final int blockSize = cipher.getBlockSize();
 
@@ -391,10 +384,13 @@ public class EncryptPIDUIController implements Initializable {
             System.arraycopy(encryptedMessage, 0, ivAndEncryptedMessage,
                     blockSize, encryptedMessage.length);
 
-            final String ivAndEncryptedMessageBase64 = DatatypeConverter
-                    .printBase64Binary(ivAndEncryptedMessage);
+            final String ivAndEncryptedMessageBase64 = Base64.getEncoder().encodeToString(ivAndEncryptedMessage);
 
             return ivAndEncryptedMessageBase64;
+        }
+        catch (DecoderException e)
+        {
+            throw new IllegalArgumentException("Cannot decode symKeyHex");
         }
         catch (InvalidKeyException e)
         {
